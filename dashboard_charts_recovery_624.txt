@@ -1,0 +1,17 @@
+The USER performed the following action:
+Show the contents of file /home/ashim/ashim/projects/jennieonyi/components/admin/dashboard/DashboardCharts.tsx from lines 1 to 45
+File Path: `file:///home/ashim/ashim/projects/jennieonyi/components/admin/dashboard/DashboardCharts.tsx`
+Total Lines: 115
+Total Bytes: 5538
+Showing lines 1 to 45
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: "use client";
+2: 
+3: export function DashboardCharts() {
+4:   return (
+5:     <div className="grid grid-cols-3 gap-[24px] mb-[24px]">
+6:       {/* Revenue Overview - 2/3 width */}
+7:       <div className="col-span-2 bg-[#FFFFF7] rounded-[16px] shadow border border-[#F3F4F6] p-[20px]">
+8:         <div className="flex justify-between items-start mb-[20px]">
+9:           <div>
+<truncated 2153 bytes>
