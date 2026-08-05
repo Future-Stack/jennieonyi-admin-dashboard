@@ -112,6 +112,7 @@ const USERS_DATA = [
 
 export default function UsersPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [viewUser, setViewUser] = useState<typeof USERS_DATA[0] | null>(null);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === USERS_DATA.length) {
@@ -184,7 +185,7 @@ export default function UsersPage() {
           <table className="w-full text-left border-collapse min-w-[1000px] bg-white">
             <thead>
               <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">
-                <th className="py-4 px-4 w-[61px] text-center">
+                {/* <th className="py-4 px-4 w-[61px] text-center">
                   <div 
                     onClick={toggleSelectAll}
                     className={`w-4 h-4 mx-auto rounded-[4px] border flex items-center justify-center cursor-pointer transition-colors ${
@@ -195,7 +196,7 @@ export default function UsersPage() {
                   >
                     {selectedIds.length === USERS_DATA.length && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                   </div>
-                </th>
+                </th> */}
                 <th className="px-4 py-4 text-left font-bold">Customer</th>
                 <th className="px-4 py-4 text-left font-bold">Contact</th>
                 <th className="px-4 py-4 text-left font-bold">Location</th>
@@ -209,7 +210,7 @@ export default function UsersPage() {
             <tbody className="bg-[#FFFFF7]">
             {USERS_DATA.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="py-3 px-4 text-center border-r border-b border-[#EEF2FF]">
+                {/* <td className="py-3 px-4 text-center border-r border-b border-[#EEF2FF]">
                   <div 
                     onClick={() => toggleSelect(user.id)}
                     className={`w-4 h-4 mx-auto rounded-[4px] border flex items-center justify-center cursor-pointer transition-colors ${
@@ -220,7 +221,7 @@ export default function UsersPage() {
                   >
                     {selectedIds.includes(user.id) && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                   </div>
-                </td>
+                </td> */}
                 <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
                   <div className="flex items-center gap-3">
                     <Image src={user.avatar} alt={user.name} width={36} height={36} className="w-[36px] h-[36px] rounded-full object-cover shrink-0" />
@@ -262,7 +263,7 @@ export default function UsersPage() {
                 </td>
                 <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
                   <div className="flex items-center justify-center gap-3">
-                    <button className="text-blue-500 hover:text-blue-700 transition-colors">
+                    <button onClick={() => setViewUser(user)} className="text-blue-500 hover:text-blue-700 transition-colors">
                       <Eye className="w-4 h-4" />
                     </button>
                     <button className="text-yellow-500 hover:text-yellow-600 transition-colors">
@@ -299,6 +300,99 @@ export default function UsersPage() {
           </button>
         </div>
       </div>
+
+      {/* User Profile Modal */}
+      {viewUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setViewUser(null)}
+        >
+          <div
+            className="bg-white rounded-[18px] w-[540px] max-h-[90vh] overflow-y-auto hide-scrollbar flex flex-col"
+            style={{ padding: '0 24px 24px 24px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between py-[18px] shrink-0">
+              <h2 className="text-[18px] font-bold text-[#1E1E1E]">User Profile</h2>
+              <button onClick={() => setViewUser(null)} className="text-gray-400 hover:text-gray-700 transition-colors text-[22px] leading-none">&times;</button>
+            </div>
+
+            {/* Avatar & Name Card */}
+            <div className="flex items-center gap-3 bg-[#F3F0FF] rounded-[12px] px-4 py-4 mb-4 shrink-0">
+              <Image
+                src={viewUser.avatar}
+                alt={viewUser.name}
+                width={48}
+                height={48}
+                className="w-[48px] h-[48px] rounded-full object-cover shrink-0"
+              />
+              <div className="flex flex-col gap-1">
+                <p className="text-[16px] font-bold text-[#1E1E1E]">{viewUser.name}</p>
+                <p className="text-[13px] text-gray-500">{viewUser.email}</p>
+                <span className={`self-start px-3 py-[2px] rounded-full text-[12px] font-medium ${
+                  viewUser.status === 'Active' ? 'bg-[#3BB515] text-white' :
+                  viewUser.status === 'Pending' ? 'bg-[#D95C30] text-white' :
+                  'bg-[#FF332C] text-white'
+                }`}>{viewUser.status}</span>
+              </div>
+            </div>
+
+            {/* Registration Details */}
+            <div className="bg-[#F0F1F3] rounded-[14px] p-4 flex flex-col gap-3 mb-4">
+              <p className="text-[13px] font-bold text-gray-700 flex items-center gap-2">
+                <span>📋</span> Registration Details (Submitted by User)
+              </p>
+              {[
+                { label: 'Full Name', value: viewUser.name },
+                { label: 'Email Address', value: viewUser.email },
+                { label: 'Phone Number', value: viewUser.phone },
+                { label: 'Address', value: viewUser.location },
+                { label: 'Bank Account', value: 'Not required (customer)' },
+                { label: 'Terms Agreed', value: `Yes — ${viewUser.joined.split(',')[1]?.trim() ?? viewUser.joined}` },
+              ].map((field) => (
+                <div key={field.label}>
+                  <p className="text-[14px] font-normal text-[#000] mb-1">{field.label}</p>
+                  <div className="bg-white rounded-[10px] border border-[#F3F4F6] px-[10px] py-[10px] flex items-center justify-between">
+                    <span className="text-[14px] font-normal text-gray-700">{field.value}</span>
+                    <Check className="w-4 h-4 text-[#00BC7D] shrink-0" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
+                <p className="text-[11px] text-gray-400 mb-1">Joined</p>
+                <p className="text-[15px] font-bold text-gray-900">{viewUser.joined}</p>
+              </div>
+              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
+                <p className="text-[11px] text-gray-400 mb-1">Bookings</p>
+                <p className="text-[15px] font-bold text-gray-900">{viewUser.bookings}</p>
+              </div>
+              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
+                <p className="text-[11px] text-gray-400 mb-1">Total Spent</p>
+                <p className="text-[15px] font-bold text-gray-900">{viewUser.revenue}</p>
+              </div>
+              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
+                <p className="text-[11px] text-gray-400 mb-1">Status</p>
+                <p className="text-[15px] font-bold text-gray-900 lowercase">{viewUser.status}</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button className="flex-1 h-[42px] rounded-[12px] bg-[#F59E0B] text-white text-[14px] font-medium hover:bg-[#D97706] transition-colors">
+                Flag for Review
+              </button>
+              <button className="flex-1 h-[42px] rounded-[12px] bg-[#FF332C] text-white text-[14px] font-medium hover:bg-[#DC2626] transition-colors">
+                Suspend
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         .hide-scrollbar::-webkit-scrollbar {
