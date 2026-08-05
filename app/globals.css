@@ -39,3 +39,8 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Ensure all buttons globally have cursor pointer */
+button {
+  cursor: pointer !important;
+}
