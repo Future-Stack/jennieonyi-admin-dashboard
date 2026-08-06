@@ -1,3 +1,5 @@
+"use client"
+
 import { Download, RefreshCw } from "lucide-react";
 
 export default function Headers({
@@ -20,7 +22,7 @@ export default function Headers({
     buttonTwoAction: () => void,
 }) {
     return (
-        <div className="flex items-center justify-between shrink-0 mb-6">
+        <div className="flex flex-col gap-3 md:flex-row items-start md:items-center justify-between shrink-0 mb-6">
         <div>
           <h1 className="text-[28px] font-bold text-[#1E1E1E]">{title}</h1>
           <p className="text-[14px] text-gray-500 mt-1">{description}</p>
