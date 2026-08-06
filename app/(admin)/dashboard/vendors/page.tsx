@@ -5,6 +5,10 @@ import { ApprovedVendorModal } from '@/components/admin/vendors/ApprovedVendorMo
 import { SuspendedVendorModal } from '@/components/admin/vendors/SuspendedVendorModal';
 import { EditCommissionModal } from '@/components/admin/vendors/EditCommissionModal';
 import { PendingVendorModal } from '@/components/admin/vendors/PendingVendorModal';
+import { ConfirmSuspendModal } from '@/components/admin/vendors/ConfirmSuspendModal';
+import { ConfirmApproveModal } from '@/components/admin/vendors/ConfirmApproveModal';
+import { ConfirmRejectModal } from '@/components/admin/vendors/ConfirmRejectModal';
+import { ConfirmReinstateModal } from '@/components/admin/vendors/ConfirmReinstateModal';
 
 const VENDORS_DATA = [
   {
@@ -115,6 +119,10 @@ export default function VendorsPage() {
   const [activeTab, setActiveTab] = useState('All Vendors');
   const [viewVendor, setViewVendor] = useState<typeof VENDORS_DATA[0] | null>(null);
   const [viewPendingVendor, setViewPendingVendor] = useState<typeof VENDORS_DATA[0] | null>(null);
+  const [vendorToSuspend, setVendorToSuspend] = useState<typeof VENDORS_DATA[0] | null>(null);
+  const [vendorToApprove, setVendorToApprove] = useState<typeof VENDORS_DATA[0] | null>(null);
+  const [vendorToReject, setVendorToReject] = useState<typeof VENDORS_DATA[0] | null>(null);
+  const [vendorToReinstate, setVendorToReinstate] = useState<typeof VENDORS_DATA[0] | null>(null);
   const [showCommissionModal, setShowCommissionModal] = useState(false);
 
   return (
@@ -327,18 +335,30 @@ export default function VendorsPage() {
                       
                       {vendor.action === 'Review' ? (
                         <>
-                          <button className="cursor-pointer bg-[#3BB515] text-white text-[11px] font-medium px-2 py-[2px] rounded-[50px] hover:bg-[#2F9E0F] transition-colors">
+                          <button 
+                            className="cursor-pointer bg-[#3BB515] text-white text-[11px] font-medium px-2 py-[2px] rounded-[50px] hover:bg-[#2F9E0F] transition-colors"
+                            onClick={() => setVendorToApprove(vendor)}
+                          >
                             Approve
                           </button>
-                          <button className="cursor-pointer bg-[#FF332C] text-white text-[11px] font-medium px-2 py-[2px] rounded-[50px] hover:bg-[#DC2626] transition-colors">
+                          <button 
+                            className="cursor-pointer bg-[#FF332C] text-white text-[11px] font-medium px-2 py-[2px] rounded-[50px] hover:bg-[#DC2626] transition-colors"
+                            onClick={() => setVendorToReject(vendor)}
+                          >
                             Reject
                           </button>
                         </>
                       ) : (
-                        <button className={`cursor-pointer text-white text-[11px] font-medium px-2 py-[2px] rounded-[50px] transition-colors ${
-                          vendor.action === 'Suspend' ? 'bg-[#FFC107] hover:bg-[#E0A800]' :
-                          'bg-[#3BB515] hover:bg-[#2F9E0F]'
-                        }`}>
+                        <button 
+                          className={`cursor-pointer text-white text-[11px] font-medium px-2 py-[2px] rounded-[50px] transition-colors ${
+                            vendor.action === 'Suspend' ? 'bg-[#FFC107] hover:bg-[#E0A800]' :
+                            'bg-[#3BB515] hover:bg-[#2F9E0F]'
+                          }`}
+                          onClick={() => 
+                            vendor.action === 'Suspend' ? setVendorToSuspend(vendor) : 
+                            vendor.action === 'Reinstate' ? setVendorToReinstate(vendor) : null
+                          }
+                        >
                           {vendor.action}
                         </button>
                       )}
@@ -352,7 +372,7 @@ export default function VendorsPage() {
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between pt-6 shrink-0">
+      <div className="flex items-center justify-between mt-6 shrink-0">
         <span className="text-[13px] text-gray-400 font-medium">Showing 6 results</span>
         <div className="flex items-center gap-1">
           <button className="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full bg-[#4D145D] text-white text-[13px] font-bold">1</button>
@@ -387,6 +407,54 @@ export default function VendorsPage() {
           vendor={viewVendor} 
           onClose={() => setShowCommissionModal(false)} 
           onSave={() => setShowCommissionModal(false)} 
+        />
+      )}
+
+      {/* Confirm Suspend Modal */}
+      {vendorToSuspend && (
+        <ConfirmSuspendModal
+          vendor={vendorToSuspend}
+          onClose={() => setVendorToSuspend(null)}
+          onConfirm={() => {
+            // Add your confirm logic here
+            setVendorToSuspend(null);
+          }}
+        />
+      )}
+
+      {/* Confirm Approve Modal */}
+      {vendorToApprove && (
+        <ConfirmApproveModal
+          vendor={vendorToApprove}
+          onClose={() => setVendorToApprove(null)}
+          onConfirm={() => {
+            // Add your confirm logic here
+            setVendorToApprove(null);
+          }}
+        />
+      )}
+
+      {/* Confirm Reject Modal */}
+      {vendorToReject && (
+        <ConfirmRejectModal
+          vendor={vendorToReject}
+          onClose={() => setVendorToReject(null)}
+          onConfirm={() => {
+            // Add your confirm logic here
+            setVendorToReject(null);
+          }}
+        />
+      )}
+
+      {/* Confirm Reinstate Modal */}
+      {vendorToReinstate && (
+        <ConfirmReinstateModal
+          vendor={vendorToReinstate}
+          onClose={() => setVendorToReinstate(null)}
+          onConfirm={() => {
+            // Add your confirm logic here
+            setVendorToReinstate(null);
+          }}
         />
       )}
 
