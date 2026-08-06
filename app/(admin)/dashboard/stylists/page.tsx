@@ -199,7 +199,7 @@ export default function StylistsPage() {
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto hide-scrollbar pb-6">
+      <div className="overflow-x-auto hide-scrollbar">
         <div className="border border-[#EEF2FF] rounded-[12px] overflow-hidden">
           <table className="w-full text-left border-collapse min-w-[1000px] bg-white">
             <thead>
@@ -310,7 +310,7 @@ export default function StylistsPage() {
     </div>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between pt-6 shrink-0 bg-white">
+      <div className="flex items-center justify-between mt-6 shrink-0 bg-white">
         <span className="text-[13px] text-gray-400 font-medium">Showing 8 results</span>
         <div className="flex items-center gap-1">
           <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#4D145D] text-white text-[13px] font-bold">
