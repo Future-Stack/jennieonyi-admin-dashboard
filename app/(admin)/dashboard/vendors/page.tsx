@@ -1,6 +1,10 @@
 "use client";
 import React, { useState } from 'react';
-import { Search, Filter, Download, Eye, RefreshCw, Store, CheckCircle2, Clock, Users, AlertCircle, X, Check, FileText } from 'lucide-react';
+import { Search, Filter, Download, Eye, RefreshCw, Store, CheckCircle2, Clock, Users, AlertCircle } from 'lucide-react';
+import { ApprovedVendorModal } from '@/components/admin/vendors/ApprovedVendorModal';
+import { SuspendedVendorModal } from '@/components/admin/vendors/SuspendedVendorModal';
+import { EditCommissionModal } from '@/components/admin/vendors/EditCommissionModal';
+import { PendingVendorModal } from '@/components/admin/vendors/PendingVendorModal';
 
 const VENDORS_DATA = [
   {
@@ -232,13 +236,15 @@ export default function VendorsPage() {
         </div>
 
         {/* Red Alert */}
-        <div className="flex items-start gap-3 bg-[#FEF2F2] border border-[#FFC9C9] rounded-[16px] p-4">
-          <AlertCircle className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[14px] font-bold text-[#991B1B]">High Refund Rate Alert — Seller Penalty Required</p>
-            <p className="text-[13px] text-[#B91C1C] mt-0.5">HairGlow Pro (14.6% refund rate) — Vendor-fault returns detected. Return shipping liability applies.</p>
+        {['All Vendors', 'Approved'].includes(activeTab) && (
+          <div className="flex items-start gap-3 bg-[#FEF2F2] border border-[#FFC9C9] rounded-[16px] p-4">
+            <AlertCircle className="w-5 h-5 text-[#C10007] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[14px] font-bold text-[#C10007]">High Refund Rate Alert — Seller Penalty Required</p>
+              <p className="text-[13px] text-[#C10007] mt-0.5">HairGlow Pro (14.6% refund rate) — Vendor-fault returns detected. Return shipping liability applies.</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Table */}
@@ -313,8 +319,8 @@ export default function VendorsPage() {
                   <td className="px-6 py-3">
                     <div className="flex items-center justify-center gap-2">
                       <button 
-                        className={`cursor-pointer transition-colors ${['Approved', 'Pending'].includes(vendor.status) ? 'text-gray-400 hover:text-blue-500' : 'text-gray-300 cursor-not-allowed'}`}
-                        onClick={() => vendor.status === 'Approved' ? setViewVendor(vendor) : vendor.status === 'Pending' ? setViewPendingVendor(vendor) : null}
+                        className="cursor-pointer transition-colors text-gray-400 hover:text-blue-500"
+                        onClick={() => vendor.status === 'Pending' ? setViewPendingVendor(vendor) : setViewVendor(vendor)}
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -358,423 +364,40 @@ export default function VendorsPage() {
       </div>
 
       {/* Vendor Profile Modal */}
-      {viewVendor && (
-        <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center"
-          onClick={() => setViewVendor(null)}
-        >
-          <div
-            className="bg-white rounded-[16px] w-[540px] max-h-[90vh] overflow-y-auto hide-scrollbar flex flex-col relative"
-            style={{ padding: '24px' }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header / Title */}
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-[18px] font-bold text-gray-900">Vendor Profile</h2>
-              <button onClick={() => setViewVendor(null)} className="cursor-pointer text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {viewVendor && !showCommissionModal && viewVendor.status !== 'Suspended' && (
+        <ApprovedVendorModal 
+          vendor={viewVendor} 
+          onClose={() => setViewVendor(null)} 
+          onEditCommission={() => setShowCommissionModal(true)} 
+        />
+      )}
 
-            {/* Banner & Avatar */}
-            <div 
-              className="relative w-full h-24 shrink-0 rounded-[16px] mb-[44px] flex items-center justify-center" 
-              style={{ background: 'linear-gradient(135deg, #4D145D 0%, #7B2796 100%)' }}
-            >
-              <Store className="w-10 h-10 text-white/20" />
-              <div 
-                className="absolute -bottom-[20px] left-4 w-14 h-14 rounded-[16px] border-[4px] border-white flex items-center justify-center shrink-0 shadow-md" 
-                style={{ background: 'linear-gradient(135deg, #4D145D 0%, #7B2796 100%)' }}
-              >
-                <Store className="w-6 h-6 text-white" />
-              </div>
-            </div>
-
-            {/* Vendor Name & Status */}
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-[20px] font-bold text-gray-900 leading-tight">{viewVendor.name}</h3>
-                <p className="text-[13px] text-gray-500 mt-1">{viewVendor.category} • {viewVendor.name.split(' ')[0]} Manager</p>
-              </div>
-              <span className="inline-flex px-3 py-1 rounded-full text-[12px] font-medium bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]">
-                {viewVendor.status}
-              </span>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-4 gap-2 mb-6">
-              <div className="bg-[#F8F9FA] rounded-[10px] py-3 flex flex-col items-center justify-center border border-gray-100">
-                <p className="text-[18px] font-bold text-gray-900 leading-none">{viewVendor.products}</p>
-                <p className="text-[11px] text-gray-400 mt-1.5 font-medium">Products</p>
-              </div>
-              <div className="bg-[#F8F9FA] rounded-[10px] py-3 flex flex-col items-center justify-center border border-gray-100">
-                <p className="text-[18px] font-bold text-gray-900 leading-none">{viewVendor.orders}</p>
-                <p className="text-[11px] text-gray-400 mt-1.5 font-medium">Orders</p>
-              </div>
-              <div className="bg-[#F8F9FA] rounded-[10px] py-3 flex flex-col items-center justify-center border border-gray-100">
-                <p className="text-[18px] font-bold text-gray-900 leading-none">{viewVendor.revenue}</p>
-                <p className="text-[11px] text-gray-400 mt-1.5 font-medium">Revenue</p>
-              </div>
-              <div className="bg-[#F8F9FA] rounded-[10px] py-3 flex flex-col items-center justify-center border border-gray-100">
-                <p className="text-[18px] font-bold text-gray-900 leading-none">{viewVendor.rating}</p>
-                <p className="text-[11px] text-gray-400 mt-1.5 font-medium">Rating</p>
-              </div>
-            </div>
-
-            {/* Details List */}
-            <div className="flex flex-col mb-6">
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Email</span>
-                <span className="font-bold text-gray-900">{viewVendor.email}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Phone</span>
-                <span className="font-bold text-gray-900">{viewVendor.phone}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Category</span>
-                <span className="font-bold text-gray-900">{viewVendor.category}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Joined</span>
-                <span className="font-bold text-gray-900">{viewVendor.joined}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Commission Rate</span>
-                <span className="font-bold text-gray-900">{viewVendor.commission}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] pt-[14px]">
-                <span className="text-gray-400 font-medium">Pending Payout</span>
-                <span className="font-bold text-gray-900">{viewVendor.payout}</span>
-              </div>
-            </div>
-
-            {/* Seller Quality Metrics */}
-            <div className="mb-6">
-              <h4 className="text-[14px] font-bold text-gray-900 mb-3">Seller Quality Metrics</h4>
-              <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-[12px] p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider mb-1">Refund Rate</p>
-                    <p className="text-[28px] font-bold text-[#16A34A] leading-none">2.1%</p>
-                  </div>
-                  <span className="inline-flex items-center gap-1 bg-[#DCFCE7] text-[#16A34A] px-2 py-1 rounded-full text-[11px] font-bold">
-                    <Check className="w-3 h-3" strokeWidth={3} /> Healthy
-                  </span>
-                </div>
-                
-                <div className="w-full bg-[#DCFCE7] h-2.5 rounded-full mb-4">
-                  <div className="bg-[#16A34A] h-2.5 rounded-full w-[15%]"></div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-white/60 rounded-[8px] py-2 flex flex-col items-center justify-center">
-                    <p className="text-[14px] font-bold text-gray-900">4</p>
-                    <p className="text-[10px] text-gray-500 font-medium">Total Returns</p>
-                  </div>
-                  <div className="bg-white/60 rounded-[8px] py-2 flex flex-col items-center justify-center">
-                    <p className="text-[14px] font-bold text-gray-900">1</p>
-                    <p className="text-[10px] text-gray-500 font-medium">Vendor Fault</p>
-                  </div>
-                  <div className="bg-white/60 rounded-[8px] py-2 flex flex-col items-center justify-center">
-                    <p className="text-[14px] font-bold text-gray-900">$0.00</p>
-                    <p className="text-[10px] text-gray-500 font-medium">Penalty Balance</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-2 bg-[#FFF7ED] border border-[#FFD6A8] rounded-[14px] p-3 mt-3">
-                <AlertCircle className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5" />
-                <p className="text-[12px] text-[#9F2D00] leading-snug">
-                  <span className="font-bold">Return Shipping Liability:</span> 1 return is due to vendor error (damaged/incorrect goods). Vendor bears full return logistics cost per platform policy.
-                </p>
-              </div>
-            </div>
-
-            {/* Registration Details */}
-            <div className="bg-[#F9FAFB] rounded-[16px] p-4 mb-6">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 mb-4">
-                <FileText className="w-3.5 h-3.5" /> Registration Details (Submitted by Vendor)
-              </p>
-              
-              <p className="text-[12px] text-[#99A1AF] font-bold mb-3">Step 1 — Personal Details</p>
-              <div className="flex flex-col gap-2 mb-5">
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Full Name</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewVendor.name.split(' ')[0]} Manager</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Email</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewVendor.email}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Phone Number</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewVendor.phone}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Password</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">••••••••</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-              </div>
-
-              <p className="text-[12px] text-[#99A1AF] font-bold mb-3">Step 2 — Business Info</p>
-              <div className="flex flex-col gap-2">
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Business / Store Name</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewVendor.name}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Product Category</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewVendor.category}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Business Document</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">NIN/CAC • Uploaded</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Bank Account (Payout)</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">••••••3812 • Verified</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowCommissionModal(true)}
-                className="cursor-pointer flex-1 h-[42px] rounded-[10px] border border-gray-200 bg-white text-gray-700 text-[14px] font-medium hover:bg-gray-50 transition-colors"
-              >
-                Edit Commission
-              </button>
-              <button className="cursor-pointer flex-1 h-[42px] rounded-[10px] bg-[#F59E0B] text-white text-[14px] font-medium hover:bg-[#D97706] transition-colors">
-                Suspend Vendor
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Suspended Vendor Modal */}
+      {viewVendor && !showCommissionModal && viewVendor.status === 'Suspended' && (
+        <SuspendedVendorModal 
+          vendor={viewVendor} 
+          onClose={() => setViewVendor(null)} 
+          onEditCommission={() => setShowCommissionModal(true)} 
+        />
       )}
 
       {/* Edit Commission Modal */}
       {showCommissionModal && viewVendor && (
-        <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center"
-          onClick={() => setShowCommissionModal(false)}
-        >
-          <div
-            className="bg-white rounded-[16px] w-[420px] flex flex-col relative"
-            style={{ padding: '24px' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[18px] font-bold text-gray-900">Edit Commission Rate</h2>
-              <button onClick={() => setShowCommissionModal(false)} className="cursor-pointer text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <p className="text-[13px] text-gray-500 mb-5 leading-relaxed">
-              Adjust commission rate for <span className="font-bold text-gray-900">{viewVendor.name}</span>.<br/>
-              Current rate: <span className="font-bold text-gray-900">{viewVendor.commission}</span>
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-[13px] font-bold text-gray-700 mb-2">Commission Rate (%)</label>
-              <input 
-                type="text" 
-                defaultValue={viewVendor.commission.replace('%', '')}
-                className="w-full h-[42px] border border-gray-200 rounded-[8px] px-3 text-[14px] font-medium text-gray-900 outline-none focus:border-[#4D145D]"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 bg-[#FFFBEB] rounded-[8px] p-3 mb-6">
-              <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
-              <p className="text-[12px] text-[#D97706]">This will apply to all future orders from this vendor.</p>
-            </div>
-
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowCommissionModal(false)}
-                className="cursor-pointer flex-1 h-[42px] rounded-[10px] border border-gray-200 bg-white text-gray-700 text-[14px] font-medium hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                className="cursor-pointer flex-1 h-[42px] rounded-[10px] bg-[#D95C30] text-white text-[14px] font-medium hover:bg-[#C24D25] transition-colors"
-              >
-                Save Rate
-              </button>
-            </div>
-          </div>
-        </div>
+        <EditCommissionModal 
+          vendor={viewVendor} 
+          onClose={() => setShowCommissionModal(false)} 
+          onSave={() => setShowCommissionModal(false)} 
+        />
       )}
 
       {/* Review Pending Vendor Modal */}
       {viewPendingVendor && (
-        <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center"
-          onClick={() => setViewPendingVendor(null)}
-        >
-          <div
-            className="bg-white rounded-[16px] w-[540px] max-h-[90vh] overflow-y-auto hide-scrollbar flex flex-col relative"
-            style={{ padding: '24px' }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header / Title */}
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-[18px] font-bold text-gray-900">Review Vendor Application</h2>
-              <button onClick={() => setViewPendingVendor(null)} className="cursor-pointer text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Banner & Avatar */}
-            <div 
-              className="relative w-full h-24 shrink-0 rounded-[16px] mb-[44px] flex items-center justify-center" 
-              style={{ background: 'linear-gradient(135deg, #4D145D 0%, #7B2796 100%)' }}
-            >
-              <Store className="w-10 h-10 text-white/20" />
-              <div 
-                className="absolute -bottom-[20px] left-4 w-14 h-14 rounded-[16px] border-[4px] border-white flex items-center justify-center shrink-0 shadow-md" 
-                style={{ background: 'linear-gradient(135deg, #4D145D 0%, #7B2796 100%)' }}
-              >
-                <Store className="w-6 h-6 text-white" />
-              </div>
-            </div>
-
-            {/* Vendor Name & Status */}
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-[20px] font-bold text-gray-900 leading-tight">{viewPendingVendor.name}</h3>
-                <p className="text-[13px] text-gray-500 mt-1">{viewPendingVendor.category} • {viewPendingVendor.name.split(' ')[0]} Manager</p>
-              </div>
-              <span className="inline-flex px-3 py-1 rounded-full text-[12px] font-medium bg-[#FFF7ED] text-[#EA580C] border border-[#FFEDD5]">
-                {viewPendingVendor.status}
-              </span>
-            </div>
-
-            {/* Details List */}
-            <div className="flex flex-col mb-6">
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Email</span>
-                <span className="font-bold text-gray-900">{viewPendingVendor.email}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Phone</span>
-                <span className="font-bold text-gray-900">{viewPendingVendor.phone}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Category</span>
-                <span className="font-bold text-gray-900">{viewPendingVendor.category}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] py-[14px] border-b border-[#E5E7EB]">
-                <span className="text-gray-400 font-medium">Applied On</span>
-                <span className="font-bold text-gray-900">{viewPendingVendor.joined}</span>
-              </div>
-              <div className="flex justify-between items-center text-[13px] pt-[14px]">
-                <span className="text-gray-400 font-medium">Proposed Commission</span>
-                <span className="font-bold text-gray-900">{viewPendingVendor.commission}</span>
-              </div>
-            </div>
-
-            {/* Registration Details */}
-            <div className="bg-[#F9FAFB] rounded-[16px] p-4 mb-6">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 mb-4">
-                <FileText className="w-3.5 h-3.5" /> Registration Details (Submitted by Vendor)
-              </p>
-              
-              <p className="text-[12px] text-[#99A1AF] font-bold mb-3">Step 1 — Personal Details</p>
-              <div className="flex flex-col gap-2 mb-5">
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Full Name</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewPendingVendor.name.split(' ')[0]} Manager</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Email</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewPendingVendor.email}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Phone Number</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewPendingVendor.phone}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-              </div>
-
-              <p className="text-[12px] text-[#99A1AF] font-bold mb-3">Step 2 — Business Info</p>
-              <div className="flex flex-col gap-2">
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Business / Store Name</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewPendingVendor.name}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Product Category</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">{viewPendingVendor.category}</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Business Document</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">NIN/CAC • Uploaded</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-                <div className="bg-white border border-[#E5E7EB] rounded-[8px] px-4 py-[10px] flex justify-between items-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                  <div>
-                    <p className="text-[11px] text-[#99A1AF] font-medium mb-0.5">Bank Account (Payout)</p>
-                    <p className="text-[13px] font-bold text-[#1E2939]">••••••3812 • Verified</p>
-                  </div>
-                  <Check className="w-[18px] h-[18px] text-[#00BC7D]" strokeWidth={2.5} />
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 mt-auto pt-2">
-              <button className="cursor-pointer flex-1 h-[42px] rounded-[10px] border border-red-200 bg-red-50 text-red-600 text-[14px] font-medium hover:bg-red-100 transition-colors">
-                Reject Vendor
-              </button>
-              <button className="cursor-pointer flex-1 h-[42px] rounded-[10px] bg-[#10B981] text-white text-[14px] font-medium hover:bg-[#059669] transition-colors">
-                Approve Vendor
-              </button>
-            </div>
-          </div>
-        </div>
+        <PendingVendorModal 
+          vendor={viewPendingVendor} 
+          onClose={() => setViewPendingVendor(null)} 
+          onApprove={() => setViewPendingVendor(null)} 
+          onReject={() => setViewPendingVendor(null)} 
+        />
       )}
 
     </div>

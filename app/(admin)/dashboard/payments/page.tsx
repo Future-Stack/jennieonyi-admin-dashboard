@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Download, RefreshCw, CreditCard, ShoppingCart, TrendingUp, Clock, Search, Eye, Package } from 'lucide-react';
+import { ResponsiveContainer, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -72,46 +73,35 @@ function ActionButton({ label }: { label: string }) {
 // ─── Bar Chart ────────────────────────────────────────────────────────────────
 
 function BarChart() {
-  const maxVal = 32000;
-  const chartHeight = 200;
-  const gridLevels = [0, 8000, 16000, 24000, 32000];
-
   return (
-    <div className="relative w-full" style={{ height: `${chartHeight + 24}px` }}>
-      {/* Horizontal grid lines — positioned from bottom */}
-      {gridLevels.map((level) => {
-        const bottomPct = (level / maxVal) * 100;
-        return (
-          <div
-            key={level}
-            className="absolute left-0 right-0 border-t border-[#E4E6E7]"
-            style={{ bottom: `${(bottomPct / 100) * chartHeight + 24}px` }}
+    <div className="w-full h-[224px] -ml-[15px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsBarChart data={CHART_DATA} margin={{ top: 10, right: 0, left: 0, bottom: 0 }} barGap={8}>
+          <CartesianGrid vertical={false} stroke="#E5E7EB" />
+          <XAxis 
+            dataKey="month" 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fill: '#9CA3AF', fontSize: 11 }}
+            dy={10}
           />
-        );
-      })}
-
-      {/* Bars row */}
-      <div className="absolute bottom-[24px] left-0 right-0 flex items-end" style={{ height: `${chartHeight}px` }}>
-        {CHART_DATA.map((d, i) => (
-          <div key={i} className="flex items-end gap-[6px] justify-center flex-1" style={{ height: `${chartHeight}px` }}>
-            <div
-              className="bg-[#4D145D] rounded-t-[4px]"
-              style={{ height: `${(d.service / maxVal) * chartHeight}px`, width: '76px' }}
-            />
-            <div
-              className="bg-[#D95C30] rounded-t-[4px]"
-              style={{ height: `${(d.product / maxVal) * chartHeight}px`, width: '76px' }}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Month labels row — at very bottom */}
-      <div className="absolute bottom-0 left-0 right-0 flex">
-        {CHART_DATA.map((d, i) => (
-          <span key={i} className="text-[11px] text-gray-400 text-center flex-1">{d.month}</span>
-        ))}
-      </div>
+          <YAxis 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fill: '#9CA3AF', fontSize: 11 }}
+            tickFormatter={(value) => `$${value / 1000}k`}
+            ticks={[0, 8000, 16000, 24000, 32000]}
+            dx={-5}
+          />
+          <Tooltip 
+            cursor={{ fill: 'transparent' }}
+            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            labelStyle={{ color: '#8390A2', fontSize: '12px', marginBottom: '4px' }}
+          />
+          <Bar dataKey="service" name="Service" fill="#4D145D" radius={[4, 4, 0, 0]} barSize={76} />
+          <Bar dataKey="product" name="Product" fill="#D95C30" radius={[4, 4, 0, 0]} barSize={76} />
+        </RechartsBarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -170,18 +160,9 @@ export default function PaymentsPage() {
           <p className="text-[12px] text-gray-400">Service bookings vs vendor product sales</p>
         </div>
 
-        {/* Y-axis labels + chart */}
-        <div className="flex gap-3">
-          <div className="flex flex-col-reverse justify-between text-[11px] text-gray-400 text-right" style={{ height: '224px' }}>
-            <span>$0k</span>
-            <span>$8k</span>
-            <span>$16k</span>
-            <span>$24k</span>
-            <span>$32k</span>
-          </div>
-          <div className="flex-1">
-            <BarChart />
-          </div>
+        {/* Chart */}
+        <div className="w-full mt-4">
+          <BarChart />
         </div>
 
         {/* Legend */}
