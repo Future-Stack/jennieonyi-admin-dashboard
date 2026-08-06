@@ -1,9 +1,11 @@
 "use client"
 
+import { CategoryDetailsModal } from "@/components/admin/categories/CategoryDetailsModal";
 import CatStateCards, { ICatStateCards } from "@/components/admin/categories/CatStateCards";
 import Headers from "@/components/admin/common/Headers";
 import { DollarSign, Download, Eye, Percent, Plus, RefreshCw, Shield, ShoppingCart, Star, Store } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 
 const stateCardsData: ICatStateCards[] = [
   {
@@ -132,6 +134,8 @@ const STYLISTS_DATA = [
 ];
 
 export default function CategoriesPage() {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white py-8 overflow-y-auto">
       <Headers
@@ -173,7 +177,7 @@ export default function CategoriesPage() {
         <div className="border border-[#EEF2FF] rounded-xl ">
           <table className="w-full text-left border-collapse min-w-[1000px] bg-white">
             <thead>
-              <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">
+              <tr className="bg-[#4D145D] text-white text-sm font-bold uppercase tracking-wider">
                 <th className="px-4 py-4 text-left font-bold">Stylist</th>
                 <th className="px-4 py-4 text-center font-bold">Specialty</th>
                 <th className="px-4 py-4 text-center font-bold">Rating</th>
@@ -235,7 +239,7 @@ export default function CategoriesPage() {
                   </td>
                   <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
                     <div className="flex items-center justify-center gap-3">
-                      <button className="text-blue-500 hover:text-blue-700 transition-colors">
+                      <button onClick={()=>{setIsOpen(true)}} className="text-blue-500 hover:text-blue-700 transition-colors">
                         <Eye className="w-4 h-4" />
                       </button>
                       <button className="text-yellow-500 hover:text-yellow-600 transition-colors">
@@ -272,6 +276,12 @@ export default function CategoriesPage() {
           </button>
         </div>
       </div>
+      <CategoryDetailsModal
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        onDelete={() => console.log("Delete clicked")}
+        onEdit={() => console.log("Edit clicked")}
+      />
     </div>
   );
 }
