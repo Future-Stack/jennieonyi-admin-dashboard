@@ -3,7 +3,7 @@
 import { CategoryDetailsModal } from "@/components/admin/categories/CategoryDetailsModal";
 import CatStateCards, { ICatStateCards } from "@/components/admin/categories/CatStateCards";
 import Headers from "@/components/admin/common/Headers";
-import { Clock, DollarSign, Download, Eye, Percent, Plus, RefreshCw, Shield, ShoppingCart, Star, Store } from "lucide-react";
+import { Clock, DollarSign, Download, Eye, Filter, Percent, Plus, RefreshCw, Search, Shield, ShoppingCart, Star, Store, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -135,6 +135,24 @@ const STYLISTS_DATA = [
 
 export default function AgentsPage() {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [activeTab, setActiveTab] = useState('Street Agents');
+  
+    const toggleSelectAll = () => {
+      if (selectedIds.length === STYLISTS_DATA.length) {
+        setSelectedIds([]);
+      } else {
+        setSelectedIds(STYLISTS_DATA.map(u => u.id));
+      }
+    };
+  
+    const toggleSelect = (id: number) => {
+      if (selectedIds.includes(id)) {
+        setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      } else {
+        setSelectedIds([...selectedIds, id]);
+      }
+    };
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white py-8 overflow-y-auto">
@@ -163,7 +181,40 @@ export default function AgentsPage() {
         ))}
       </div>
 
-        
+      {/* Top Controls */}
+      <div className="flex items-center justify-between shrink-0 mb-6">
+        <div className="flex items-center">
+          <div className="flex items-center bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] h-[46px]">
+            {['Street Agents', 'Agent Referrals'].map((tab) => (
+              <button 
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 h-[32px] rounded-[8px] text-[13px] font-medium flex items-center justify-center transition-colors ${
+                  activeTab === tab 
+                    ? 'bg-[#4D145D] text-white shadow-sm' 
+                    : 'bg-transparent text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-[6px] h-[40px] bg-white border border-gray-200 rounded-lg px-[12px] w-[260px]">
+            <Search className="w-[16px] h-[16px] text-gray-400 shrink-0" />
+            <input 
+              type="text" 
+              placeholder="Search stylists..." 
+              className="bg-transparent border-none outline-none text-[13px] font-normal text-[#1E1E1E] placeholder:text-gray-400 w-full"
+            />
+          </div>
+          <button className="flex items-center justify-center gap-2 px-5 h-[40px] border border-gray-200 rounded-lg bg-white text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <Filter className="w-4 h-4" />
+            Filter
+          </button>
+        </div>
+      </div>  
 
       {/* table  */}
       <div className="overflow-x-auto mb-3 mt-6">
@@ -238,9 +289,9 @@ export default function AgentsPage() {
                       <button className="text-yellow-500 hover:text-yellow-600 transition-colors">
                         <Shield className="w-4 h-4" />
                       </button>
-                      {/* <button className="text-red-500 hover:text-red-700 transition-colors">
+                      <button className="text-red-500 hover:text-red-700 transition-colors">
                       <Trash2 className="w-4 h-4" />
-                    </button> */}
+                    </button>
                     </div>
                   </td>
                 </tr>
@@ -278,4 +329,3 @@ export default function AgentsPage() {
     </div>
   );
 }
-
