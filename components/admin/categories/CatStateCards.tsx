@@ -3,8 +3,8 @@ import { Store } from "lucide-react";
 export interface ICatStateCards {
     title: string;
     data: string;
-    icon: React.ReactNode;
-    iconBgColor: string;
+    icon?: React.ReactNode;
+    iconBgColor?: string;
     valueColor?: string;
 }
 
@@ -21,9 +21,11 @@ export default function CatStateCards({
             <p className="text-[12px] text-gray-500 font-bold tracking-wider uppercase">{title}</p>
             <p className={`text-[26px] font-bold ${valueColor} leading-none`}>{data}</p>
           </div>
+          {icon && (
           <div className={`w-[36px] h-[36px] rounded-[8px] ${iconBgColor} flex items-center justify-center`}>
             {icon}
           </div>
+          )}
         </div>
     );
 }
