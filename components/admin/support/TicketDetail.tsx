@@ -62,7 +62,7 @@ export function TicketDetail({ ticket, onUpdateTicket }: TicketDetailProps) {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-muted/20">
-      <div className="mx-auto w-full max-w-3xl space-y-4 p-6">
+      <div className="w-full space-y-4 p-6">
         {/* Header card */}
         <div className="rounded-xl border bg-white p-5">
           <div className="flex flex-wrap items-center gap-2">

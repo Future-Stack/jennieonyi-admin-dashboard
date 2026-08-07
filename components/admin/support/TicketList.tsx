@@ -53,7 +53,7 @@ export function TicketList({
   }, [tickets, search, statusFilter]);
 
   return (
-    <div className="flex h-full flex-col border-r bg-white">
+    <div className="flex h-full flex-col bg-white">
       {/* Search + filter */}
       <div className="flex items-center gap-2 border-b p-4">
         <div className="relative flex-1">
@@ -100,7 +100,7 @@ export function TicketList({
                 key={ticket.id}
                 onClick={() => onSelectTicket(ticket.id)}
                 className={cn(
-                  "flex w-full items-start gap-3 border-b px-4 py-4 text-left transition-colors hover:bg-muted/50",
+                  "flex w-full items-start gap-3 border-b border-gray-100 px-4 py-4 text-left transition-colors hover:bg-muted/50",
                   isSelected && "bg-violet-50 hover:bg-violet-50"
                 )}
               >

@@ -1,8 +1,12 @@
 "use client"
 import CatStateCards, { ICatStateCards } from "@/components/admin/categories/CatStateCards";
 import Headers from "@/components/admin/common/Headers";
+import { TicketDetail } from "@/components/admin/support/TicketDetail";
 import { TicketList } from "@/components/admin/support/TicketList";
+import { dummyTickets } from "@/data/dummy-tickets";
+import { Ticket } from "@/types/ticket";
 import { Download, RefreshCw } from "lucide-react";
+import { useState } from "react";
 
 const stateCardsData: ICatStateCards[] = [
   {
@@ -32,6 +36,21 @@ const stateCardsData: ICatStateCards[] = [
 ]
 
 export default function SupportPage() {
+  const [tickets, setTickets] = useState<Ticket[]>(dummyTickets);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(
+    dummyTickets[1]?.id ?? null // SUP-002 selected by default, matching the reference
+  );
+
+  const selectedTicket =
+    tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
+
+  const handleUpdateTicket = (updatedTicket: Ticket) => {
+    setTickets((prev) =>
+      prev.map((ticket) =>
+        ticket.id === updatedTicket.id ? updatedTicket : ticket
+      )
+    );
+  };
   return (
     <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white py-8 overflow-y-auto">
       <Headers
@@ -57,18 +76,18 @@ export default function SupportPage() {
       </div>
 
 
-      {/* <div className="flex h-screen w-full overflow-hidden">
-        <div className="w-[30%] min-w-[280px]">
+      <div className="flex w-full overflow-hidden">
+        <div className="w-full md:w-90 lg:w-100">
           <TicketList
             tickets={tickets}
             selectedTicketId={selectedTicketId}
             onSelectTicket={setSelectedTicketId}
           />
         </div>
-        <div className="w-[70%]">
+        <div className="grow">
           <TicketDetail ticket={selectedTicket} onUpdateTicket={handleUpdateTicket} />
         </div>
-      </div> */}
+      </div>
     </div>
   );
 }
