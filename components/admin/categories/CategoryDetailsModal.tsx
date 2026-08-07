@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Database, Pencil } from "lucide-react";
+import { EditCategoryModal } from "./EditCategoryModal";
 
 // Define TypeScript Interface for the Category Details
 export interface CategoryData {
@@ -56,6 +57,20 @@ export function CategoryDetailsModal({
     categoryCommission = "-12%",
     netPayoutToVendor = "88%",
   } = data || {};
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Example Category Data passed into props
+  const currentCategory = {
+    categoryName: "Hair Extensions",
+    platformFee: "12",
+    status: "",
+  };
+
+  const handleSave = (updatedValues:any) => {
+    console.log("Updated Category Data:", updatedValues);
+    // Submit to your Next.js API or Server Action here
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -164,7 +179,7 @@ export function CategoryDetailsModal({
               Delete
             </Button>
             <Button
-              onClick={onEdit}
+              onClick={()=>{setIsOpen(true)}}
               className="w-full bg-[#E05A32] hover:bg-[#d04e28] text-white font-semibold rounded-xl h-11 gap-2"
             >
               <Pencil className="w-4 h-4" />
@@ -173,6 +188,12 @@ export function CategoryDetailsModal({
           </div>
         </div>
       </DialogContent>
+      <EditCategoryModal
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        initialValues={currentCategory}
+        onSave={handleSave}
+      />
     </Dialog>
   );
 }
