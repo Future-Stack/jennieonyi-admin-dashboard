@@ -76,7 +76,7 @@ export default function SupportPage() {
       </div>
 
 
-      <div className="flex w-full overflow-hidden">
+      <div className="flex flex-col md:flex-row w-full overflow-hidden">
         <div className="w-full md:w-90 lg:w-100">
           <TicketList
             tickets={tickets}

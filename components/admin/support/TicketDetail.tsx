@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Ticket, TicketMessage } from "@/types/ticket";
 import { priorityStyles, statusStyles } from "@/lib/ticket-styles";
 import { cn } from "@/lib/utils";
+import { IssueRefundModal } from "./IssueRefundModal";
 
 interface TicketDetailProps {
   ticket: Ticket | null;
@@ -22,6 +23,13 @@ const QUICK_REPLIES = [
 
 export function TicketDetail({ ticket, onUpdateTicket }: TicketDetailProps) {
   const [reply, setReply] = useState("");
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleProcessRefund = (data: any) => {
+    console.log("Processing refund with values:", data);
+    // Send data to your backend API or server action
+  };
 
   if (!ticket) {
     return (
@@ -214,6 +222,7 @@ export function TicketDetail({ ticket, onUpdateTicket }: TicketDetailProps) {
             <Button
               variant="outline"
               className="border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+              onClick={() => setIsOpen(true)}
             >
               <DollarSign className="mr-1.5 h-4 w-4" />
               Issue Refund
@@ -245,6 +254,16 @@ export function TicketDetail({ ticket, onUpdateTicket }: TicketDetailProps) {
           </div>
         </div>
       </div>
+
+      <IssueRefundModal
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        ticketId="SUP-001"
+        userName="Amara Johnson"
+        issueType="Booking Issue"
+        onProcessRefund={handleProcessRefund}
+      />
+
     </div>
   );
 }
