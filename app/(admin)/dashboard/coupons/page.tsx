@@ -181,7 +181,7 @@ export default function CouponsPage() {
 
       {/* Filter Tabs */}
       <div className="flex items-center my-6">
-        <div className="flex items-center bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-1 shadow-2xs h-11">
+        <div className="flex flex-wrap md:flex-nowrap items-center bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-1 shadow-2xs h-fit md:h-11">
           {couponTabs.map((tab) => {
             const isActive = activeTab === tab.name;
             return (

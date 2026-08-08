@@ -78,7 +78,7 @@ export function CouponModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[500px] w-full p-6 sm:p-7 rounded-3xl bg-white shadow-2xl border-none">
+      <DialogContent className="max-w-3xl! w-full mx-1 md:mx-0 p-6 sm:p-7 rounded-3xl bg-white shadow-2xl border-none">
         {/* Header */}
         <DialogHeader className="border-b border-gray-100 pb-4">
           <DialogTitle className="text-xl font-bold text-gray-900 text-left">
