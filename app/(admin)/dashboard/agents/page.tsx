@@ -26,6 +26,7 @@ import {
   X,
   Check,
 } from "lucide-react";
+import DeleteConfirmationModal from "@/components/admin/common/DeleteConfirmationModal";
 
 export interface AgentItem {
   id: number;
@@ -165,6 +166,8 @@ const INITIAL_AGENTS: AgentItem[] = [
 ];
 
 export default function AgentsPage() {
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [agents, setAgents] = useState<AgentItem[]>(INITIAL_AGENTS);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<"Street Agents" | "Agent Referrals">("Street Agents");
@@ -308,11 +311,10 @@ export default function AgentsPage() {
     showToast(`${agent.name} status changed to ${nextStatus}`);
   };
 
-  const handleDeleteAgent = (id: number, name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
+  const handleDeleteAgent = (id: number | null) => {
+    if(id){
       setAgents((prev) => prev.filter((a) => a.id !== id));
       setSelectedIds((prev) => prev.filter((i) => i !== id));
-      showToast(`Deleted ${name}`);
     }
   };
 
@@ -428,11 +430,10 @@ export default function AgentsPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 h-[34px] rounded-lg text-[13px] font-semibold flex items-center justify-center transition-all ${
-                  activeTab === tab
+                className={`px-4 h-[34px] rounded-lg text-[13px] font-semibold flex items-center justify-center transition-all ${activeTab === tab
                     ? "bg-[#4D145D] text-white shadow-xs"
                     : "bg-transparent text-gray-500 hover:text-gray-900"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -544,9 +545,8 @@ export default function AgentsPage() {
                 return (
                   <tr
                     key={agent.id}
-                    className={`hover:bg-purple-50/40 transition-colors border-b border-[#EEF2FF] ${
-                      isSelected ? "bg-purple-50/60" : ""
-                    }`}
+                    className={`hover:bg-purple-50/40 transition-colors border-b border-[#EEF2FF] ${isSelected ? "bg-purple-50/60" : ""
+                      }`}
                   >
                     {/* Checkbox */}
                     <td className="py-3.5 px-4 text-center border-r border-[#EEF2FF]">
@@ -604,15 +604,14 @@ export default function AgentsPage() {
                     <td className="py-3.5 px-4 border-r border-[#EEF2FF]">
                       <div className="flex items-center justify-center">
                         <span
-                          className={`px-3 py-0.5 rounded-full text-[12px] font-semibold border ${
-                            agent.tier === "Platinum"
+                          className={`px-3 py-0.5 rounded-full text-[12px] font-semibold border ${agent.tier === "Platinum"
                               ? "border-gray-300 text-gray-700 bg-gray-100/80"
                               : agent.tier === "Gold"
-                              ? "border-[#F59E0B] text-[#D97706] bg-[#FFFBEB]"
-                              : agent.tier === "Silver"
-                              ? "border-[#9CA3AF] text-[#6B7280] bg-[#F3F4F6]"
-                              : "border-[#EA580C] text-[#C2410C] bg-[#FFF7ED]"
-                          }`}
+                                ? "border-[#F59E0B] text-[#D97706] bg-[#FFFBEB]"
+                                : agent.tier === "Silver"
+                                  ? "border-[#9CA3AF] text-[#6B7280] bg-[#F3F4F6]"
+                                  : "border-[#EA580C] text-[#C2410C] bg-[#FFF7ED]"
+                            }`}
                         >
                           {agent.tier}
                         </span>
@@ -623,13 +622,12 @@ export default function AgentsPage() {
                     <td className="py-3.5 px-4 border-r border-[#EEF2FF]">
                       <div className="flex items-center justify-center">
                         <span
-                          className={`px-3 py-1 rounded-full text-[11px] font-semibold text-white shadow-2xs ${
-                            agent.status === "Active" || agent.status === "Verified"
+                          className={`px-3 py-1 rounded-full text-[11px] font-semibold text-white shadow-2xs ${agent.status === "Active" || agent.status === "Verified"
                               ? "bg-[#3BB515]"
                               : agent.status === "Pending"
-                              ? "bg-[#D95C30]"
-                              : "bg-[#FF332C]"
-                          }`}
+                                ? "bg-[#D95C30]"
+                                : "bg-[#FF332C]"
+                            }`}
                         >
                           {agent.status}
                         </span>
@@ -654,7 +652,10 @@ export default function AgentsPage() {
                           <Shield className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteAgent(agent.id, agent.name)}
+                          onClick={() => {
+                            setDeleteModalOpen(true);
+                            setSelectedAgentId(agent.id);
+                          }}
                           title="Delete Agent"
                           className="text-[#FF332C] hover:text-rose-700 transition-transform hover:scale-110"
                         >
@@ -719,6 +720,13 @@ export default function AgentsPage() {
           if (updatedData) handleSaveModalData(updatedData);
           showToast(`Agent status updated to ${updatedData?.status || "Suspended"}`);
         }}
+      />
+
+      {/* delete modal  */}
+      <DeleteConfirmationModal
+        open={deleteModalOpen}
+        setOpen={setDeleteModalOpen}
+        handleDelete={() => handleDeleteAgent(selectedAgentId)}
       />
     </div>
   );
