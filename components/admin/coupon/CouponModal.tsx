@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 
 export interface CouponFormData {
+  id?: string;
   couponCode: string;
   discountType: string;
   discountValue: string;
@@ -99,6 +100,7 @@ export function CouponModal({
                 value={formData.couponCode}
                 onChange={handleChange}
                 placeholder="BEAUTY30"
+                required
                 className="h-12 rounded-2xl border-gray-200 bg-white px-4 text-sm font-medium text-gray-900 focus-visible:ring-1 focus-visible:ring-orange-500 shadow-none placeholder:text-gray-400"
               />
             </div>
@@ -133,7 +135,8 @@ export function CouponModal({
                 name="discountValue"
                 value={formData.discountValue}
                 onChange={handleChange}
-                placeholder="30%"
+                placeholder="30% or $20"
+                required
                 className="h-12 rounded-2xl border-gray-200 bg-white px-4 text-sm font-medium text-gray-900 focus-visible:ring-1 focus-visible:ring-orange-500 shadow-none placeholder:text-gray-400"
               />
             </div>
@@ -178,7 +181,7 @@ export function CouponModal({
                 name="expiryDate"
                 value={formData.expiryDate}
                 onChange={handleChange}
-                placeholder="mm/dd/yyy"
+                placeholder="Dec 31, 2025"
                 className="h-12 rounded-2xl border-gray-200 bg-white px-4 text-sm font-medium text-gray-900 focus-visible:ring-1 focus-visible:ring-orange-500 shadow-none placeholder:text-gray-400"
               />
             </div>
@@ -199,7 +202,7 @@ export function CouponModal({
               type="submit"
               className="w-2/3 h-12 rounded-2xl bg-[#E05A32] hover:bg-[#d04e28] text-white font-semibold shadow-none"
             >
-              Save Changes
+              {mode === "edit" ? "Save Changes" : "Create Coupon"}
             </Button>
           </div>
         </form>
