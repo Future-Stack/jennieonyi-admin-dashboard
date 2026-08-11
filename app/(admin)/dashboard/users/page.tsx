@@ -131,10 +131,10 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white overflow-y-auto">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-1 md:p-8 overflow-y-auto">
       
       {/* Page Header */}
-      <div className="flex items-center justify-between shrink-0 mb-8">
+      <div className="flex items-center justify-between flex-wrap shrink-0 mb-8">
         <div>
           <h1 className="text-[28px] font-bold text-[#1E1E1E]">User Management</h1>
           <p className="text-[14px] text-gray-500 mt-1">Manage all platform users, stylists, and agents</p>
@@ -146,7 +146,7 @@ export default function UsersPage() {
       </div>
 
       {/* Top Controls */}
-      <div className="flex items-center justify-between shrink-0 mb-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 md:gap-0 shrink-0 mb-6">
         <div className="flex items-center">
           <div className="flex items-center justify-center bg-white border border-[#F3F4F6] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] w-[310px] h-[46px]">
             <button className="bg-[#4D145D] text-white w-[294px] h-[32px] rounded-[8px] text-[13px] font-medium flex items-center justify-center gap-[6px]">
@@ -154,7 +154,7 @@ export default function UsersPage() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-3">
           <div className="flex items-center gap-[6px] h-[40px] bg-white border border-gray-200 rounded-lg px-[12px] w-[260px]">
             <Search className="w-[16px] h-[16px] text-gray-400 shrink-0" />
             <input 
@@ -180,8 +180,8 @@ export default function UsersPage() {
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto hide-scrollbar">
-        <div className="border border-[#EEF2FF] rounded-[12px] overflow-hidden">
+      <div className="overflow-x-auto">
+        <div className="border border-[#EEF2FF] rounded-[12px] ">
           <table className="w-full text-left border-collapse min-w-[1000px] bg-white">
             <thead>
               <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">

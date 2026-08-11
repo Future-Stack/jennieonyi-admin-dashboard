@@ -206,10 +206,10 @@ export default function StylistsPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white overflow-y-auto">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-1 md:p-8 overflow-y-auto">
       
       {/* Page Header */}
-      <div className="flex items-center justify-between shrink-0 mb-6">
+      <div className="flex items-center justify-between flex-wrap shrink-0 mb-6">
         <div>
           <h1 className="text-[28px] font-bold text-[#1E1E1E]">Stylist Management</h1>
           <p className="text-[14px] text-gray-500 mt-1">Manage all platform users, stylists, and agents</p>
@@ -227,7 +227,7 @@ export default function StylistsPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-[#F0F1F3] rounded-[12px] p-5 border border-[#F0F1F3] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
           <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">Total Stylists</div>
           <div className="text-[24px] font-bold text-[#4D145D]">1,247</div>
@@ -247,9 +247,9 @@ export default function StylistsPage() {
       </div>
 
       {/* Top Controls */}
-      <div className="flex items-center justify-between shrink-0 mb-6">
-        <div className="flex items-center">
-          <div className="flex items-center bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] h-[46px]">
+      <div className="flex items-center justify-between flex-wrap shrink-0 mb-6">
+        <div className="flex items-center ">
+          <div className="flex items-center flex-wrap bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] h-[46px]">
             {['All', 'Verified', 'Pending', 'Suspended'].map((tab) => (
               <button 
                 key={tab}
@@ -265,7 +265,7 @@ export default function StylistsPage() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-3">
           <div className="flex items-center gap-[6px] h-[40px] bg-white border border-gray-200 rounded-lg px-[12px] w-[260px]">
             <Search className="w-[16px] h-[16px] text-gray-400 shrink-0" />
             <input 
@@ -282,8 +282,8 @@ export default function StylistsPage() {
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto hide-scrollbar">
-        <div className="border border-[#EEF2FF] rounded-[12px] overflow-hidden">
+      <div className="overflow-x-auto">
+        <div className="border border-[#EEF2FF] rounded-[12px]">
           <table className="w-full text-left border-collapse min-w-[1000px] bg-white">
             <thead>
               <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">

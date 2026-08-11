@@ -25,11 +25,11 @@ const statsRows = [
 
 export function DashboardStats() {
   return (
-    <div className="flex flex-col gap-[20px] mb-[24px]">
+    <div className="flex flex-col gap-5 mb-6">
       {statsRows.map((row, ri) => (
-        <div key={ri} className="grid grid-cols-4 gap-[20px]">
+        <div key={ri} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {row.map((stat, i) => (
-            <div key={i} className="bg-[#F0F1F3] rounded-[8px] p-[20px] h-[138px] shadow border border-[#F0F1F3] flex justify-between items-start">
+            <div key={i} className="bg-[#F0F1F3] rounded-[8px] p-5 h-[138px] shadow border border-[#F0F1F3] flex justify-between items-start">
               <div className="flex flex-col justify-between h-full">
                 <p className="text-[14px] text-gray-500 font-medium">{stat.title}</p>
                 <p className="text-[28px] font-bold text-gray-900 leading-none">{stat.value}</p>

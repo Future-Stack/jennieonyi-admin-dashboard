@@ -8,7 +8,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onRefresh }: DashboardHeaderProps) {
   return (
-    <div className="flex items-center justify-between mb-[24px]">
+    <div className="flex items-center justify-between flex-wrap mb-6">
       <div>
         <h2 className="text-[28px] font-bold text-gray-900 leading-tight">Overview</h2>
         <p className="text-[14px] text-[#8390A2] font-normal leading-[21px] mt-[4px]">
