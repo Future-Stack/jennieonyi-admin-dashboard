@@ -34,10 +34,10 @@ export function DashboardActivity() {
   return (
     <div className="flex flex-col gap-[24px] mb-[24px]">
       {/* Top Row: Recent Orders (Left) & Quick Actions/Activity (Right) */}
-      <div className="grid grid-cols-3 gap-[24px]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-[24px]">
 
         {/* Recent Orders - 2/3 width */}
-        <div className="col-span-2 bg-[#FFFFF7] rounded-[8px] shadow border border-[#E4E6E7] p-[16px] flex flex-col h-[570px]">
+        <div className="lg:col-span-2 bg-[#FFFFF7] rounded-[8px] shadow border border-[#E4E6E7] p-[16px] flex flex-col h-[570px]">
           <h3 className="text-[18px] font-bold text-gray-900 mb-[18px] shrink-0">Recent Orders</h3>
           <div className="overflow-hidden rounded-[8px] flex-1">
             <div className="overflow-y-auto h-full no-scrollbar">
@@ -88,7 +88,7 @@ export function DashboardActivity() {
         </div>
 
         {/* Right Column (Quick Actions & Recent Activity) - 1/3 width */}
-        <div className="col-span-1 flex flex-col gap-[24px]">
+        <div className="lg:col-span-1 flex flex-col gap-[24px]">
           {/* Quick Actions */}
           <div className="bg-[#FFFFF7] rounded-[8px] shadow border border-[#E4E6E7] p-[16px] shrink-0">
             <h3 className="text-[18px] font-bold text-gray-900 mb-[16px]">Quick Actions</h3>
@@ -126,11 +126,7 @@ export function DashboardActivity() {
       </div>
 
       {/* Bottom Row: Pending Approvals (Restricted to 2/3 width) */}
-      <div className="grid grid-cols-3 gap-[24px]">
-        <div className="col-span-2">
           <PendingApprovals />
-        </div>
-      </div>
     </div>
   );
 }

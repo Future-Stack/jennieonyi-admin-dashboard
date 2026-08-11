@@ -100,10 +100,10 @@ export default function BookingsPage() {
   const [viewBooking, setViewBooking] = useState<typeof BOOKINGS_DATA[0] | null>(null);
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-8 overflow-y-auto">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-1 md:p-8 overflow-y-auto">
       
       {/* Page Header */}
-      <div className="flex items-center justify-between shrink-0 mb-6">
+      <div className="flex items-center justify-between flex-wrap shrink-0 mb-6">
         <div>
           <h1 className="text-[28px] font-bold text-[#1E1E1E]">Bookings Overview</h1>
           <p className="text-[14px] text-gray-500 mt-1">Monitor all hair service bookings and their status</p>
@@ -121,7 +121,7 @@ export default function BookingsPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-6 gap-4 mb-6 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-6 gap-4 mb-6 shrink-0">
         <div className="bg-[#F0F1F3] rounded-[16px] h-[94px] border border-[#F3F4F6] flex flex-col justify-center items-center shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] gap-0.5">
           <p className="text-[26px] font-[800] text-[#4D145D] leading-[1.5]">1,247</p>
           <p className="text-[12px] text-[#6A7282] font-normal">Total</p>
@@ -149,8 +149,8 @@ export default function BookingsPage() {
       </div>
 
       {/* Tabs & Search */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-[6px] bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] pl-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] h-[46px]">
+      <div className="flex items-center justify-between flex-wrap mb-6">
+        <div className="flex items-center flex-wrap gap-[6px] bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] pl-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] h-[46px]">
           {['All', 'Pending', 'Confirmed', 'Active', 'Completed', 'Cancelled'].map((tab) => {
             const counts = { 'All': 8, 'Pending': 2, 'Confirmed': 1, 'Active': 1, 'Completed': 3, 'Cancelled': 1 };
             const isActive = activeTab === tab;
@@ -170,7 +170,7 @@ export default function BookingsPage() {
             );
           })}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-3">
           <div className="flex items-center gap-[6px] h-[40px] bg-white border border-gray-200 rounded-lg px-[12px] w-[260px]">
             <Search className="w-[16px] h-[16px] text-gray-400 shrink-0" />
             <input 
@@ -187,8 +187,8 @@ export default function BookingsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto hide-scrollbar">
-        <div className="border border-[#E4E6E7] rounded-[8px] overflow-hidden">
+      <div className="overflow-x-auto">
+        <div className="border border-[#E4E6E7] rounded-[8px]">
           <table className="w-full text-left border-collapse bg-[#FFFFF7]">
             <thead>
               <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">

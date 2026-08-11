@@ -15,7 +15,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate authentication delay
+    // Simulate authentication delay..
     setTimeout(() => {
       setLoading(false);
       router.push("/dashboard");
