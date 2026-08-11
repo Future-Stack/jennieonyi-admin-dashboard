@@ -17,7 +17,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="p-[12px] h-full overflow-y-auto no-scrollbar">
+    <div className=" h-full overflow-y-auto no-scrollbar">
       <DashboardHeader onRefresh={handleRefresh} />
       
       {loading ? (
