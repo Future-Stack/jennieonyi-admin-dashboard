@@ -39,9 +39,9 @@ const bookingsData = [
 
 export function DashboardCharts() {
   return (
-    <div className="grid grid-cols-5 gap-[24px] mb-[24px]">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-[24px] mb-[24px]">
       {/* Revenue Overview - 3/5 width */}
-      <div className="col-span-3 bg-[#FFFFF7] rounded-[16px] shadow border border-[#F3F4F6] p-[20px] flex flex-col h-[303px]">
+      <div className=" lg:col-span-3 bg-[#FFFFF7] rounded-[16px] shadow border border-[#F3F4F6] p-[20px] flex flex-col h-[303px]">
         <div className="flex justify-between items-start mb-[20px] shrink-0">
           <div>
             <h3 className="text-[18px] font-bold text-gray-900 leading-tight">Revenue Overview</h3>
@@ -105,7 +105,7 @@ export function DashboardCharts() {
       </div>
 
       {/* Bookings This Week - 2/5 width */}
-      <div className="col-span-2 bg-[#FFFFF7] rounded-[16px] shadow border border-[#F3F4F6] p-[20px] flex flex-col h-[303px]">
+      <div className="lg:col-span-2 bg-[#FFFFF7] rounded-[16px] shadow border border-[#F3F4F6] p-[20px] flex flex-col h-[303px]">
         <div className="mb-[20px] shrink-0">
           <h3 className="text-[18px] font-bold text-gray-900 leading-tight">Bookings This Week</h3>
           <p className="text-[13px] text-[#8390A2] mt-[4px]">Daily bookings trend</p>
