@@ -387,7 +387,7 @@ export default function AgentsPage() {
   }, [selectedAgent]);
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white py-8 px-4 sm:px-6 overflow-y-auto">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white  overflow-y-auto">
       {/* Notification Toast */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 bg-[#4D145D] text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-3">
