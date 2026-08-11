@@ -131,7 +131,7 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-8 overflow-y-auto">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white overflow-y-auto">
       
       {/* Page Header */}
       <div className="flex items-center justify-between shrink-0 mb-8">
