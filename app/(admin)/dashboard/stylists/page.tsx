@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Search, Filter, ChevronDown, Download, Eye, Trash2, Shield, Check, Plus, Star } from 'lucide-react';
+import { Search, Filter, ChevronDown, Download, Eye, Trash2, Shield, Check, Plus, Star, Pencil } from 'lucide-react';
 import { ModalMode, StylistData, StylistModal } from '@/components/admin/stylist/StylistModal';
 
 const STYLISTS_DATA = [
@@ -103,44 +103,89 @@ const STYLISTS_DATA = [
   },
 ];
 
-// Dummy dataset passed via props for modal
-const dummyStylistData : StylistData = {
-  fullName: "Kezia Okafor",
-  email: "kezia.o@email.com",
+// Helper to convert row data to StylistData modal format
+const formatStylistToData = (stylist: typeof STYLISTS_DATA[0]): StylistData => ({
+  fullName: stylist.name,
+  email: stylist.email,
   phone: "+1 555-1001",
   uploadId: "Driver's License · Verified",
   location: "Houston, TX",
   bankAccount: "••••••4821 · Verified",
-  specialty: "Braiding & Locs",
+  specialty: stylist.specialty,
   referralCode: "PLAIT-EMK-2794",
-  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop",
-  products: "4.9",
-  orders: "287",
-  revenue: "$12,450",
-  tierProgress: 287,
-};
+  avatarUrl: stylist.avatar,
+  products: String(stylist.rating),
+  orders: String(stylist.jobs),
+  revenue: stylist.revenue,
+  tierProgress: stylist.jobs,
+});
+
+// Default fallback dataset
+const dummyStylistData: StylistData = formatStylistToData(STYLISTS_DATA[0]);
+
 export default function StylistsPage() {
+  const [stylists, setStylists] = useState(STYLISTS_DATA);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState('All');
 
   const [isOpen, setIsOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("view");
+  const [selectedStylist, setSelectedStylist] = useState<StylistData | null>(null);
+  const [selectedStylistId, setSelectedStylistId] = useState<number | null>(null);
 
   const handleOpenCreate = () => {
+    setSelectedStylist(null);
+    setSelectedStylistId(null);
     setModalMode("create");
     setIsOpen(true);
   };
 
-  const handleOpenView = () => {
+  const handleOpenView = (stylist: typeof STYLISTS_DATA[0]) => {
+    const data = formatStylistToData(stylist);
+    setSelectedStylist(data);
+    setSelectedStylistId(stylist.id);
     setModalMode("view");
     setIsOpen(true);
   };
 
-  const handleSave = (data: any, saveMode: "create" | "edit") => {
+  const handleOpenEdit = (stylist: typeof STYLISTS_DATA[0]) => {
+    const data = formatStylistToData(stylist);
+    setSelectedStylist(data);
+    setSelectedStylistId(stylist.id);
+    setModalMode("edit");
+    setIsOpen(true);
+  };
+
+  const handleSave = (data: StylistData, saveMode: "create" | "edit") => {
     if (saveMode === "create") {
-      console.log("Creating new stylist:", data);
+      const newStylist = {
+        id: Date.now(),
+        name: data.fullName || "New Stylist",
+        email: data.email || "stylist@email.com",
+        avatar: data.avatarUrl || "https://i.pravatar.cc/150?u=" + Date.now(),
+        specialty: data.specialty || "General",
+        rating: 5.0,
+        jobs: 0,
+        revenue: "$0",
+        tier: "Bronze",
+        status: "Pending",
+      };
+      setStylists((prev) => [newStylist, ...prev]);
     } else {
-      console.log("Saving edited stylist:", data);
+      setStylists((prev) =>
+        prev.map((s) =>
+          s.id === selectedStylistId
+            ? {
+                ...s,
+                name: data.fullName,
+                email: data.email,
+                specialty: data.specialty,
+                revenue: data.revenue || s.revenue,
+              }
+            : s
+        )
+      );
+      setSelectedStylist(data);
     }
   };
 
@@ -265,7 +310,7 @@ export default function StylistsPage() {
               </tr>
             </thead>
             <tbody className="bg-[#FFFFF7]">
-            {STYLISTS_DATA.map((stylist) => (
+            {stylists.map((stylist) => (
               <tr key={stylist.id} className="hover:bg-gray-50 transition-colors group">
                 {/* <td className="py-3 px-4 text-center border-r border-b border-[#EEF2FF]">
                   <div 
@@ -329,15 +374,15 @@ export default function StylistsPage() {
                 </td>
                 <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
                   <div className="flex items-center justify-center gap-3">
-                    <button onClick={handleOpenView} className="text-blue-500 hover:text-blue-700 transition-colors">
+                    <button onClick={() => handleOpenView(stylist)} className="text-blue-500 hover:text-blue-700 transition-colors" title="View Stylist">
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button className="text-yellow-500 hover:text-yellow-600 transition-colors">
+                    <button onClick={() => handleOpenEdit(stylist)} className="text-amber-500 hover:text-amber-700 transition-colors" title="Edit Stylist">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button className="text-yellow-500 hover:text-yellow-600 transition-colors" title="Shield">
                       <Shield className="w-4 h-4" />
                     </button>
-                    {/* <button className="text-red-500 hover:text-red-700 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button> */}
                   </div>
                 </td>
               </tr>
@@ -349,7 +394,7 @@ export default function StylistsPage() {
 
       {/* Pagination Footer */}
       <div className="flex items-center justify-between mt-6 shrink-0 bg-white">
-        <span className="text-[13px] text-gray-400 font-medium">Showing 8 results</span>
+        <span className="text-[13px] text-gray-400 font-medium">Showing {stylists.length} results</span>
         <div className="flex items-center gap-1">
           <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#4D145D] text-white text-[13px] font-bold">
             1
@@ -381,7 +426,7 @@ export default function StylistsPage() {
         open={isOpen}
         onOpenChange={setIsOpen}
         initialMode={modalMode}
-        initialData={modalMode !== "create" ? dummyStylistData : undefined}
+        initialData={modalMode !== "create" ? (selectedStylist || dummyStylistData) : undefined}
         onSave={handleSave}
         onUpgrade={() => console.log("Upgrade clicked")}
         onSuspend={() => console.log("Suspend clicked")}

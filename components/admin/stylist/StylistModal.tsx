@@ -87,8 +87,11 @@ export function StylistModal({
     if (onSave) {
       onSave(formData, mode as "create" | "edit");
     }
-    setMode("view");
-    if (mode === "create") onOpenChange(false);
+    if (mode === "create") {
+      onOpenChange(false);
+    } else {
+      setMode("view");
+    }
   };
 
   // Helper to render read-only view field vs active input field
@@ -124,7 +127,11 @@ export function StylistModal({
         {/* Header */}
         <DialogHeader className="border-b border-gray-100 pb-4 mb-2">
           <DialogTitle className="text-xl font-bold text-gray-900 text-left">
-            {mode === "create" ? "Register New Stylist" : "Stylist Profile & Registration"}
+            {mode === "create"
+              ? "Register New Stylist"
+              : mode === "edit"
+              ? "Edit Stylist Profile"
+              : "Stylist Profile & Registration"}
           </DialogTitle>
         </DialogHeader>
 
@@ -232,7 +239,7 @@ export function StylistModal({
               >
                 Upgrade Tier
               </Button>
-              <Button
+              {/* <Button
                 type="button"
                 variant="outline"
                 onClick={() => setMode("edit")}
@@ -240,11 +247,11 @@ export function StylistModal({
               >
                 <Pencil className="w-3.5 h-3.5" />
                 Edit
-              </Button>
+              </Button> */}
               <Button
                 type="button"
                 onClick={onSuspend}
-                className="w-full bg-[#FF3B30] hover:bg-[#e03126] text-white font-semibold rounded-xl h-11 text-xs shadow-none"
+                className="w-full col-span-2 bg-[#FF3B30] hover:bg-[#e03126] text-white font-semibold rounded-xl h-11 text-xs shadow-none"
               >
                 Suspend
               </Button>
@@ -254,7 +261,14 @@ export function StylistModal({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => mode === "create" ? onOpenChange(false) : setMode("view")}
+                onClick={() => {
+                  if (mode === "create") {
+                    onOpenChange(false);
+                  } else {
+                    if (initialData) setFormData({ ...emptyData, ...initialData });
+                    setMode("view");
+                  }
+                }}
                 className="w-1/3 h-12 rounded-xl border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 shadow-none"
               >
                 Cancel
