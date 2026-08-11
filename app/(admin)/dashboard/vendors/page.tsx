@@ -126,10 +126,10 @@ export default function VendorsPage() {
   const [showCommissionModal, setShowCommissionModal] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-8 overflow-y-auto">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-1 md:p-8 overflow-y-auto">
       
       {/* Page Header */}
-      <div className="flex items-center justify-between shrink-0 mb-6">
+      <div className="flex items-center justify-between flex-wrap shrink-0 mb-6">
         <div>
           <h1 className="text-[28px] font-bold text-[#1E1E1E]">Vendor Management</h1>
           <p className="text-[14px] text-gray-500 mt-1">Manage marketplace vendors, approvals, and performance</p>
@@ -147,7 +147,7 @@ export default function VendorsPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-[#F0F1F3] rounded-[12px] p-5 border border-[#F0F1F3] flex justify-between items-start">
           <div className="flex flex-col gap-2">
             <p className="text-[12px] text-gray-500 font-bold tracking-wider uppercase">Total Vendors</p>
@@ -190,9 +190,9 @@ export default function VendorsPage() {
       </div>
 
       {/* Alerts & Filtering */}
-      <div className="flex flex-col gap-4 mb-6">
+      <div className="flex flex-col  gap-4 mb-6">
         {/* Yellow Alert */}
-        <div className="flex items-center justify-between bg-[#FFFBEB] border border-[#FEE685] rounded-[16px] p-4">
+        <div className="flex items-center justify-between flex-wrap bg-[#FFFBEB] border border-[#FEE685] rounded-[16px] p-4">
           <div className="flex items-start gap-3">
             <Clock className="w-5 h-5 text-[#D97706] shrink-0 mt-0.5" />
             <div>
@@ -206,8 +206,8 @@ export default function VendorsPage() {
         </div>
 
         {/* Tabs & Search */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] h-[46px]">
+        <div className="flex items-center justify-between flex-wrap">
+          <div className="flex items-center flex-wrap gap-1 bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] h-[46px]">
             {['All Vendors', 'Approved', 'Pending', 'Suspended'].map((tab) => {
               const counts = { 'All Vendors': 6, 'Approved': 3, 'Pending': 2, 'Suspended': 1 };
               const isActive = activeTab === tab;
@@ -227,7 +227,7 @@ export default function VendorsPage() {
               );
             })}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center flex-wrap gap-3">
             <div className="flex items-center gap-[6px] h-[40px] bg-white border border-gray-200 rounded-lg px-[12px] w-[260px]">
               <Search className="w-[16px] h-[16px] text-gray-400 shrink-0" />
               <input 
@@ -256,8 +256,8 @@ export default function VendorsPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto hide-scrollbar">
-        <div className="border border-[#E4E6E7] rounded-[8px] overflow-hidden">
+      <div className="overflow-x-auto">
+        <div className="border border-[#E4E6E7] rounded-[8px]">
           <table className="w-full text-left border-collapse bg-[#FFFFF7]">
             <thead>
               <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">
