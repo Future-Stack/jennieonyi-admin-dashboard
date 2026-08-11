@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Download, RefreshCw, CreditCard, ShoppingCart, TrendingUp, Clock, Search, Eye, Package } from 'lucide-react';
 import { ResponsiveContainer, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ReleasePaymentModal } from '@/components/admin/payment/ReleasePaymentModal';
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ function BarChart() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PaymentsPage() {
+  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'service' | 'product'>('service');
 
   return (
@@ -255,10 +257,14 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-4 py-3 border-b border-[#E4E6E7]">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                        {/* <button className="text-gray-400 hover:text-gray-600 transition-colors">
                           <Eye className="w-4 h-4" />
-                        </button>
-                        {txn.statusAction && <ActionButton label={txn.statusAction} />}
+                        </button> */}
+                        {txn.statusAction && <div onClick={() => {
+                          if(txn.statusAction === 'Release'){
+                            setIsOpen(true)
+                          }
+                        }}><ActionButton label={txn.statusAction} /></div>}
                       </div>
                     </td>
                   </tr>
@@ -305,10 +311,14 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-4 py-3 border-b border-[#E4E6E7]">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                        <button onClick={()=> setIsOpen(true)} className="text-gray-400 hover:text-gray-600 transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
-                        {txn.statusAction && <ActionButton label={txn.statusAction} />}
+                        {txn.statusAction && <div onClick={() =>{
+                          if(txn.statusAction === 'Release'){
+                            setIsOpen(true)
+                          }
+                        }}><ActionButton label={txn.statusAction} /></div>}
                       </div>
                     </td>
                   </tr>
@@ -323,6 +333,12 @@ export default function PaymentsPage() {
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
+
+      <ReleasePaymentModal
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        onConfirmRelease={() => console.log("Payment released successfully!")}
+      />
     </div>
   );
 }
