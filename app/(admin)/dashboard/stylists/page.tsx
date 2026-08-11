@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { Search, Filter, ChevronDown, Download, Eye, Trash2, Shield, Check, Plus, Star } from 'lucide-react';
+import { ModalMode, StylistData, StylistModal } from '@/components/admin/stylist/StylistModal';
 
 const STYLISTS_DATA = [
   {
@@ -102,9 +103,46 @@ const STYLISTS_DATA = [
   },
 ];
 
+// Dummy dataset passed via props for modal
+const dummyStylistData : StylistData = {
+  fullName: "Kezia Okafor",
+  email: "kezia.o@email.com",
+  phone: "+1 555-1001",
+  uploadId: "Driver's License · Verified",
+  location: "Houston, TX",
+  bankAccount: "••••••4821 · Verified",
+  specialty: "Braiding & Locs",
+  referralCode: "PLAIT-EMK-2794",
+  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop",
+  products: "4.9",
+  orders: "287",
+  revenue: "$12,450",
+  tierProgress: 287,
+};
 export default function StylistsPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState('All');
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>("view");
+
+  const handleOpenCreate = () => {
+    setModalMode("create");
+    setIsOpen(true);
+  };
+
+  const handleOpenView = () => {
+    setModalMode("view");
+    setIsOpen(true);
+  };
+
+  const handleSave = (data: any, saveMode: "create" | "edit") => {
+    if (saveMode === "create") {
+      console.log("Creating new stylist:", data);
+    } else {
+      console.log("Saving edited stylist:", data);
+    }
+  };
 
   const toggleSelectAll = () => {
     if (selectedIds.length === STYLISTS_DATA.length) {
@@ -136,7 +174,7 @@ export default function StylistsPage() {
             <Download className="w-4 h-4" />
             Export
           </button>
-          <button className="flex items-center gap-[6px] bg-[#D95C30] border border-[#D95C30] px-4 py-[10px] rounded-[6px] text-white text-[14px] font-medium hover:bg-[#C24D25] transition-colors">
+          <button onClick={handleOpenCreate} className="flex items-center gap-[6px] bg-[#D95C30] border border-[#D95C30] px-4 py-[10px] rounded-[6px] text-white text-[14px] font-medium hover:bg-[#C24D25] transition-colors">
             <Plus className="w-4 h-4" />
             Add Stylist
           </button>
@@ -291,7 +329,7 @@ export default function StylistsPage() {
                 </td>
                 <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
                   <div className="flex items-center justify-center gap-3">
-                    <button className="text-blue-500 hover:text-blue-700 transition-colors">
+                    <button onClick={handleOpenView} className="text-blue-500 hover:text-blue-700 transition-colors">
                       <Eye className="w-4 h-4" />
                     </button>
                     <button className="text-yellow-500 hover:text-yellow-600 transition-colors">
@@ -338,6 +376,16 @@ export default function StylistsPage() {
           scrollbar-width: none;  /* Firefox */
         }
       `}} />
+
+      <StylistModal
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        initialMode={modalMode}
+        initialData={modalMode !== "create" ? dummyStylistData : undefined}
+        onSave={handleSave}
+        onUpgrade={() => console.log("Upgrade clicked")}
+        onSuspend={() => console.log("Suspend clicked")}
+      />
     </div>
   );
 }
