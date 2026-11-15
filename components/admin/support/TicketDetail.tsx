@@ -1,269 +1,110 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Send, CheckCircle2, DollarSign, X, Inbox } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Ticket, TicketMessage } from "@/types/ticket";
-import { priorityStyles, statusStyles } from "@/lib/ticket-styles";
-import { cn } from "@/lib/utils";
-import { IssueRefundModal } from "./IssueRefundModal";
-
-interface TicketDetailProps {
-  ticket: Ticket | null;
-  onUpdateTicket: (ticket: Ticket) => void;
-}
+import { CheckCircle2, DollarSign, Mail, Send, X } from "lucide-react";
+import { Avatar, StatusPill } from "@/components/admin/common/kit";
+import { Field, textareaClass } from "@/components/admin/common/Modal";
+import { formatDate, formatDateTime, titleCase } from "@/lib/admin/format";
+import { useTicketDetail, useTicketMessages, useTicketPriority, useTicketReply, useTicketStatus, type Ticket } from "@/lib/admin/resources";
+import { ApiError } from "@/lib/api/errors";
+import { audienceMeta, statusLabel } from "./TicketList";
 
 const QUICK_REPLIES = [
-  "We've received your request and are investigating.",
+  "We've received your request and are investigating. We'll update you shortly.",
   "Your issue has been escalated to our technical team.",
-  "The refund has been processed — 3-5 business days.",
-  "Please update your app to the latest version.",
+  "The refund has been processed. It should reflect in 3–5 business days.",
+  "Please update your app to the latest version and try again.",
 ];
+const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
-export function TicketDetail({ ticket, onUpdateTicket }: TicketDetailProps) {
-  const [reply, setReply] = useState("");
+export function TicketDetail({ ticketId, onRefund, onNotice }: { ticketId: string; onRefund: (ticket: Ticket) => void; onNotice: (kind: "success" | "error", text: string) => void }) {
+  const detail = useTicketDetail(ticketId);
+  const messages = useTicketMessages(ticketId);
+  const reply = useTicketReply();
+  const status = useTicketStatus();
+  const priority = useTicketPriority();
+  const [text, setText] = useState("");
+  const [internal, setInternal] = useState(false);
+  const ticket = detail.data;
 
-  const [isOpen, setIsOpen] = useState(false);
+  if (detail.isLoading) return <div className="space-y-4" aria-label="Loading ticket"><div className="h-48 animate-pulse rounded-2xl bg-gray-100" /><div className="h-48 animate-pulse rounded-2xl bg-gray-100" /></div>;
+  if (detail.error || !ticket) return <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6 text-[14px] text-red-700">{detail.error?.message ?? "This ticket could not be loaded."}</p>;
 
-  const handleProcessRefund = (data: any) => {
-    console.log("Processing refund with values:", data);
-    // Send data to your backend API or server action
-  };
+  const audience = audienceMeta(ticket.audience);
+  const closed = ticket.status === "CLOSED";
+  const canResolve = ["PENDING", "UNDER_REVIEW"].includes(ticket.status);
+  const canClose = ["RESOLVED", "REJECTED"].includes(ticket.status);
+  const canRefund = !!(ticket.bookingId || ticket.orderId) && !closed;
+  const busy = reply.isPending || status.isPending;
+  const messageRows = messages.data?.rows ?? [];
 
-  if (!ticket) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 bg-muted/20 text-center">
-        <Inbox className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          Select a ticket from the list to view details.
-        </p>
-      </div>
-    );
+  async function run<T>(job: () => Promise<T>, success: string) {
+    try { await job(); onNotice("success", success); }
+    catch (cause) { onNotice("error", cause instanceof ApiError ? cause.message : "That action could not be completed. Please try again."); }
+  }
+  async function send() {
+    const message = text.trim();
+    if (!message) return;
+    await run(() => reply.mutateAsync({ id: ticketId, message, isInternal: internal }), internal ? "Internal note saved." : "Reply sent to the user.");
+    setText(""); setInternal(false);
+  }
+  async function setTicketStatus(next: "UNDER_REVIEW" | "RESOLVED" | "CLOSED", resolution?: string) {
+    await run(() => status.mutateAsync({ id: ticketId, status: next, resolution }), `${ticket!.ticketNumber} marked as ${titleCase(next)}.`);
   }
 
-  const initials = ticket.requesterInitials;
-
-  const appendMessage = (message: string) => {
-    if (!message.trim()) return;
-    const newMessage: TicketMessage = {
-      id: `m-${Date.now()}`,
-      senderName: "Admin",
-      senderRole: "admin",
-      date: "Today",
-      message: message.trim(),
-    };
-    onUpdateTicket({
-      ...ticket,
-      messages: [...ticket.messages, newMessage],
-    });
-  };
-
-  const handleSendReply = () => {
-    appendMessage(reply);
-    setReply("");
-  };
-
-  const handleStatusAction = (status: Ticket["status"]) => {
-    onUpdateTicket({ ...ticket, status });
-  };
-
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-muted/20">
-      <div className="w-full space-y-4 p-6">
-        {/* Header card */}
-        <div className="rounded-xl border bg-white p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-violet-700">
-              {ticket.id}
-            </span>
-            <span
-              className={cn(
-                "rounded-full border px-2 py-0.5 text-xs font-medium",
-                statusStyles[ticket.status]
-              )}
-            >
-              {ticket.status}
-            </span>
-            <span
-              className={cn(
-                "rounded-full border px-2 py-0.5 text-xs font-medium",
-                priorityStyles[ticket.priority]
-              )}
-            >
-              {ticket.priority}
-            </span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600">
-              {ticket.requesterRole}
-            </span>
-          </div>
+    <div className="space-y-4">
+      <section aria-label="Ticket summary" className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2"><span className="text-[12px] font-bold text-[#4D145D]">{ticket.ticketNumber}</span><StatusPill status={ticket.status} label={statusLabel(ticket.status)} /><StatusPill status={ticket.priority} /><span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[12px] text-gray-600">{audience.label}</span></div>
+        <h2 className="mt-3 text-[18px] font-bold text-gray-900">{ticket.subject}</h2>
+        <p className="mt-1 text-[12px] text-gray-500">Filed {formatDate(ticket.createdAt)} · {ticket.replyCount} {ticket.replyCount === 1 ? "reply" : "replies"} · {titleCase(ticket.issueCategory)}</p>
+        <p className="mt-4 whitespace-pre-wrap rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-4 text-[13px] text-[#1E3A8A]">{ticket.description}</p>
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-gray-50 p-3"><div className="flex items-center gap-3"><Avatar name={ticket.userName ?? "User"} src={ticket.userAvatar} size={36} /><div><p className="text-[13px] font-semibold text-gray-900">{ticket.userName ?? "Unknown user"}</p><p className="text-[12px] text-gray-500">{audience.label}</p></div></div><Mail className="h-4 w-4 text-gray-400" aria-hidden /></div>
+        {!closed ? <label className="mt-4 flex items-center gap-3 text-[13px] font-medium text-gray-700">Priority<select value={ticket.priority} disabled={priority.isPending} onChange={(event) => void run(() => priority.mutateAsync({ id: ticketId, priority: event.target.value }), `Priority set to ${titleCase(event.target.value)}.`)} className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-[13px]">{PRIORITIES.map((p) => <option key={p} value={p}>{titleCase(p)}</option>)}</select></label> : null}
+      </section>
 
-          <h2 className="mt-2 text-lg font-semibold text-foreground">
-            {ticket.subject}
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Filed {ticket.filedDate} · {ticket.messages.length - 1 > 0 ? ticket.messages.length - 1 : 0}{" "}
-            replies
-          </p>
+      <section aria-label="Conversation" className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <h3 className="mb-4 text-[13px] font-semibold uppercase tracking-wide text-gray-500">Conversation</h3>
+        {messages.isLoading ? <div className="h-16 animate-pulse rounded bg-gray-100" aria-label="Loading messages" />
+          : messages.error ? <p role="alert" className="text-[13px] text-red-700">{messages.error.message}</p>
+          : (
+            <ul className="space-y-3">
+              <li className="flex gap-3"><Avatar name={ticket.userName ?? "User"} src={ticket.userAvatar} size={28} /><div className="max-w-[85%] rounded-xl bg-[#EFF6FF] p-3 text-[13px] text-gray-800"><p className="mb-1 text-[12px] font-semibold text-[#2563EB]">{ticket.userName ?? "User"} · {formatDate(ticket.createdAt)}</p>{ticket.description}</div></li>
+              {messageRows.map((message) => {
+                const fromAdmin = message.senderRole === "ADMIN";
+                return (
+                  <li key={message.id} className={`flex gap-3 ${fromAdmin ? "flex-row-reverse" : ""}`}>
+                    <Avatar name={message.senderName ?? titleCase(message.senderRole)} size={28} />
+                    <div className={`max-w-[85%] rounded-xl p-3 text-[13px] text-gray-800 ${message.isInternal ? "border border-dashed border-amber-300 bg-amber-50" : fromAdmin ? "bg-gray-50" : "bg-[#EFF6FF]"}`}>
+                      <p className="mb-1 text-[12px] font-semibold text-gray-600">{message.senderName ?? titleCase(message.senderRole)} · {formatDateTime(message.createdAt)}{message.isInternal ? <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-900">Internal note</span> : null}</p>
+                      <p className="whitespace-pre-wrap">{message.message}</p>
+                    </div>
+                  </li>
+                );
+              })}
+              {messageRows.length === 0 ? <li className="text-[13px] text-gray-500">No replies yet.</li> : null}
+            </ul>
+          )}
+      </section>
 
-          <div className="mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-900">
-            {ticket.description}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between rounded-lg bg-muted/40 px-4 py-2.5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-900 text-xs font-semibold text-white">
-                {initials}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {ticket.requesterName}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {ticket.requesterRole}
-                </p>
-              </div>
+      <section aria-label="Reply" className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        {closed ? <p className="text-[13px] text-gray-500">This ticket is closed. Closed tickets can&apos;t receive new replies.</p> : (
+          <>
+            <Field label="Reply to user"><textarea value={text} onChange={(event) => setText(event.target.value)} maxLength={5000} className={textareaClass} placeholder="Type your response..." /></Field>
+            <label className="mt-2 flex items-center gap-2 text-[12px] text-gray-600"><input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} />Internal note (not sent to the user)</label>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" disabled={busy || !text.trim()} onClick={() => void send()} className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#4D145D] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#3C0F49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-4 w-4" aria-hidden />Send Reply</button>
+              {ticket.status === "PENDING" ? <button type="button" disabled={busy} onClick={() => void setTicketStatus("UNDER_REVIEW")} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-2.5 text-[13px] font-semibold text-[#2563EB] hover:bg-blue-100 disabled:opacity-50">Start Review</button> : null}
+              {canResolve ? <button type="button" disabled={busy || text.trim().length < 5} title={text.trim().length < 5 ? "Type the resolution in the reply box first" : undefined} onClick={() => void setTicketStatus("RESOLVED", text.trim()).then(() => setText(""))} className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#10B981] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#059669] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"><CheckCircle2 className="h-4 w-4" aria-hidden />Resolve</button> : null}
+              {canRefund ? <button type="button" disabled={busy} onClick={() => onRefund(ticket)} className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#D95C30] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#C24D25] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D95C30] focus-visible:ring-offset-2 disabled:opacity-50"><DollarSign className="h-4 w-4" aria-hidden />Issue Refund</button> : null}
+              {canClose ? <button type="button" disabled={busy} onClick={() => void setTicketStatus("CLOSED", ticket.status === "REJECTED" ? "Closed after rejection" : "Closed after resolution")} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"><X className="h-4 w-4" aria-hidden />Close</button> : null}
             </div>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </div>
-
-        {/* Conversation */}
-        <div className="rounded-xl border bg-white p-5">
-          <p className="mb-3 text-sm font-medium text-muted-foreground">
-            Conversation
-          </p>
-          <div className="space-y-4">
-            {ticket.messages.map((message) => {
-              const isAdmin = message.senderRole === "admin";
-              return (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex items-start gap-2.5",
-                    isAdmin && "flex-row-reverse text-right"
-                  )}
-                >
-                  {!isAdmin && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-900 text-xs font-semibold text-white">
-                      {initials}
-                    </div>
-                  )}
-                  <div className={cn("max-w-[80%]", isAdmin && "flex flex-col items-end")}>
-                    <div className="flex items-center gap-2 text-xs">
-                      {!isAdmin ? (
-                        <>
-                          <span className="font-medium text-violet-700">
-                            {message.senderName}
-                          </span>
-                          <span className="text-muted-foreground">
-                            · {message.date}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="font-medium text-violet-700">
-                            Admin · {message.date}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <div
-                      className={cn(
-                        "mt-1 rounded-lg px-4 py-2.5 text-sm",
-                        isAdmin
-                          ? "bg-muted text-foreground"
-                          : "bg-blue-50 text-blue-900"
-                      )}
-                    >
-                      {message.message}
-                    </div>
-                  </div>
-                  {isAdmin && (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-900 text-xs font-semibold text-white">
-                      S
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Reply box */}
-        <div className="rounded-xl border bg-white p-5">
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            Reply to User
-          </p>
-          <Textarea
-            value={reply}
-            onChange={(e) => setReply(e.target.value)}
-            placeholder="Type your response..."
-            className="min-h-24 resize-none"
-          />
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              onClick={handleSendReply}
-              disabled={!reply.trim()}
-              className="bg-violet-900 hover:bg-violet-800"
-            >
-              <Send className="mr-1.5 h-4 w-4" />
-              Send Reply
-            </Button>
-            <Button
-              variant="outline"
-              className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
-              onClick={() => handleStatusAction("Resolved")}
-            >
-              <CheckCircle2 className="mr-1.5 h-4 w-4" />
-              Resolve
-            </Button>
-            <Button
-              variant="outline"
-              className="border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-              onClick={() => setIsOpen(true)}
-            >
-              <DollarSign className="mr-1.5 h-4 w-4" />
-              Issue Refund
-            </Button>
-            <Button
-              variant="outline"
-              className="text-muted-foreground"
-              onClick={() => handleStatusAction("Closed")}
-            >
-              <X className="mr-1.5 h-4 w-4" />
-              Close
-            </Button>
-          </div>
-
-          <div className="mt-4 border-t pt-3">
-            <p className="mb-2 text-xs text-muted-foreground">Quick replies:</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {QUICK_REPLIES.map((quickReply) => (
-                <button
-                  key={quickReply}
-                  onClick={() => setReply(quickReply)}
-                  className="truncate rounded-full border px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted"
-                  title={quickReply}
-                >
-                  {quickReply}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <IssueRefundModal
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        ticketId="SUP-001"
-        userName="Amara Johnson"
-        issueType="Booking Issue"
-        onProcessRefund={handleProcessRefund}
-      />
-
+            <p className="mb-2 mt-5 text-[12px] text-gray-500">Quick replies:</p>
+            <div className="flex flex-wrap gap-2">{QUICK_REPLIES.map((quick) => <button key={quick} type="button" onClick={() => setText(quick)} className="max-w-[300px] cursor-pointer truncate rounded-lg border border-gray-200 px-3 py-2 text-left text-[12px] text-gray-600 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]" title={quick}>{quick}</button>)}</div>
+            {canResolve ? <p className="mt-3 text-[12px] text-gray-500">Resolve uses the reply text as the recorded resolution.</p> : null}
+          </>
+        )}
+      </section>
     </div>
   );
 }

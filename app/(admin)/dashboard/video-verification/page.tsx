@@ -1,469 +1,498 @@
 "use client";
-import React, { useState, useRef } from 'react';
-import Image from 'next/image';
-import { Search, Filter, CheckCircle2, XCircle, MapPin, Mail, Play, Check, X, ChevronDown, Clock } from 'lucide-react';
 
-const QUEUE_ITEMS = [
-  {
-    id: 1,
-    name: 'Blessing Adeyemi',
-    type: 'Extensions & Weaves',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: true,
-    avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=100&q=80',
-    hasAutoBadge: true,
-  },
-  {
-    id: 2,
-    name: 'Funke Odeyemi',
-    type: 'Braiding',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
-  },
-  {
-    id: 3,
-    name: 'Ifeoma Chukwu',
-    type: 'Locs & Twists',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=100&q=80',
-  },
-  {
-    id: 4,
-    name: 'Adaora Nkem',
-    type: 'Natural Hair',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80',
-  },
-  {
-    id: 5,
-    name: 'Chinwe Igwe',
-    type: 'Knotless Braids',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1589156280159-27698a70f29e?auto=format&fit=crop&w=100&q=80',
-  },
-  {
-    id: 6,
-    name: 'Obiageli Onu',
-    type: 'Protective Styles',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
-  },
-  {
-    id: 7,
-    name: 'Adaora Nkem',
-    type: 'Natural Hair',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80',
-  },
-  {
-    id: 8,
-    name: 'Grace Ojo',
-    type: 'Extensions & Weaves',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-  },
-  {
-    id: 9,
-    name: 'Amaka Eze',
-    type: 'Braiding',
-    servicesCount: 2,
-    timeAgo: '2 hours ago',
-    time: '3:42',
-    isActive: false,
-    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=100&q=80',
-  }
-];
+import React, { useMemo, useState } from "react";
+import Image from "next/image";
+import {
+  CheckCircle2,
+  Clock,
+  Mail,
+  MapPin,
+  Play,
+  Search,
+  X,
+  XCircle,
+} from "lucide-react";
+import { ApiError } from "@/lib/api/errors";
+import {
+  buildVerificationQueue,
+  peopleQueryKeys,
+  useApproveStylistKyc,
+  usePendingStylistKyc,
+  usePendingStylistServiceReviews,
+  useRejectStylistKyc,
+  useReviewStylistService,
+  useStylistDetail,
+  type VerificationQueueGroup,
+} from "@/lib/admin/people";
+import { formatNaira } from "@/lib/admin/dashboard";
+import { useQueryClient } from "@tanstack/react-query";
+
+const PAGE_SIZE = 50;
+
+type ReviewTarget =
+  | { kind: "account"; userId: string }
+  | { kind: "service"; serviceId: string };
+function getErrorMessage(error: unknown): string {
+  return error instanceof ApiError
+    ? error.message
+    : "The request could not be completed. Please try again.";
+}
+
+function formatTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Lagos",
+  }).format(date);
+}
 
 export default function VideoVerificationPage() {
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "account" | "service">("all");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<ReviewTarget | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (videoRef.current.paused) {
-        videoRef.current.play();
-        setIsPlaying(true);
-      } else {
-        videoRef.current.pause();
-        setIsPlaying(false);
-      }
+  const listFilters = useMemo(
+    () => ({ page, limit: PAGE_SIZE, search }),
+    [page, search],
+  );
+  const kycQuery = usePendingStylistKyc(listFilters);
+  const serviceQuery = usePendingStylistServiceReviews(listFilters);
+  const approveKyc = useApproveStylistKyc();
+  const rejectKyc = useRejectStylistKyc();
+  const reviewService = useReviewStylistService();
+  const queue = useMemo(
+    () =>
+      buildVerificationQueue(
+        kycQuery.data?.data ?? [],
+        serviceQuery.data?.data ?? [],
+      ),
+    [kycQuery.data, serviceQuery.data],
+  );
+  const visibleQueue = queue.filter((group) =>
+    filter === "account"
+      ? group.accountPending
+      : filter === "service"
+        ? group.services.length > 0
+        : true,
+  );
+  const selectedGroup =
+    visibleQueue.find((group) => group.user.userId === selectedUserId) ??
+    visibleQueue[0] ??
+    null;
+  const selectedDetail = useStylistDetail(selectedGroup?.user.userId ?? null);
+  const selectedService =
+    selectedGroup?.services.find((service) => service.id === selectedServiceId) ??
+    selectedGroup?.services[0] ??
+    null;
+  const isMutating =
+    approveKyc.isPending || rejectKyc.isPending || reviewService.isPending;
+  const errorMessage =
+    actionError ??
+    (approveKyc.error ? getErrorMessage(approveKyc.error) : null) ??
+    (rejectKyc.error ? getErrorMessage(rejectKyc.error) : null) ??
+    (reviewService.error ? getErrorMessage(reviewService.error) : null);
+
+  const selectGroup = (group: VerificationQueueGroup) => {
+    setSelectedUserId(group.user.userId);
+    setSelectedServiceId(group.services[0]?.id ?? null);
+    setActionError(null);
+  };
+
+  const approveAccount = async () => {
+    if (!selectedGroup?.accountPending) return;
+    setActionError(null);
+    try {
+      await approveKyc.mutateAsync({ userId: selectedGroup.user.userId });
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKeys.pendingStylistKyc });
+    } catch (error) {
+      setActionError(getErrorMessage(error));
     }
   };
 
+  const approveService = async (serviceId: string) => {
+    setActionError(null);
+    try {
+      await reviewService.mutateAsync({ serviceId, status: "LIVE" });
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKeys.pendingServiceReviews });
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+    }
+  };
+
+  const openReject = (target: ReviewTarget) => {
+    setRejectTarget(target);
+    setRejectReason("");
+    setActionError(null);
+  };
+
+  const submitReject = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!rejectTarget || rejectReason.trim().length < 5) return;
+    setActionError(null);
+    try {
+      if (rejectTarget.kind === "account") {
+        await rejectKyc.mutateAsync({
+          userId: rejectTarget.userId,
+          reason: rejectReason.trim(),
+        });
+      } else {
+        await reviewService.mutateAsync({
+          serviceId: rejectTarget.serviceId,
+          status: "REJECTED",
+          adminNote: rejectReason.trim(),
+        });
+      }
+      setRejectTarget(null);
+      setRejectReason("");
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+    }
+  };
+
+  const isLoading = kycQuery.isLoading || serviceQuery.isLoading;
+  const isError = kycQuery.isError || serviceQuery.isError;
+  const totalPages = Math.max(
+    kycQuery.data?.meta.totalPages ?? 0,
+    serviceQuery.data?.meta.totalPages ?? 0,
+  );
+
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden">
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-6 shrink-0">
+    <div className="flex min-h-[calc(100vh-80px)] flex-col overflow-y-auto p-1 md:p-4">
+      <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[24px] font-bold text-[#1E1E1E]">Video Verification Queue</h1>
-          <p className="text-[14px] text-gray-500 mt-1">6 stylists awaiting review</p>
+          <p className="mt-1 text-[14px] text-gray-500">
+            {visibleQueue.length} stylist{visibleQueue.length === 1 ? "" : "s"} awaiting review
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-[6px] h-[41px] bg-[#EAE8E8] border border-[#CFD4DB] rounded-[6px] px-[16px] w-[260px]">
-            <Search className="w-[16px] h-[16px] text-[#97A2B1] shrink-0" />
-            <input 
-              type="text" 
-              placeholder="Search stylists..." 
-              className="bg-transparent border-none outline-none text-[14px] font-normal text-[#1E1E1E] placeholder:text-[#97A2B1] w-full"
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex h-[41px] w-[260px] items-center gap-[6px] rounded-[6px] border border-[#CFD4DB] bg-[#EAE8E8] px-[16px] focus-within:ring-2 focus-within:ring-[#4D145D]">
+            <Search className="h-4 w-4 shrink-0 text-[#97A2B1]" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search stylists..."
+              aria-label="Search verification queue"
+              className="w-full border-none bg-transparent text-[14px] text-[#1E1E1E] outline-none placeholder:text-[#97A2B1]"
             />
-          </div>
-          <button className="flex items-center justify-center gap-2 px-4 h-[41px] border border-[#CFD4DB] rounded-[6px] bg-white text-[14px] font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <Filter className="w-4 h-4" />
-            Filter
+          </label>
+          <select
+            value={filter}
+            onChange={(event) => setFilter(event.target.value as typeof filter)}
+            aria-label="Filter verification queue"
+            className="h-[41px] rounded-[6px] border border-[#CFD4DB] bg-white px-3 text-sm text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+          >
+            <option value="all">All reviews</option>
+            <option value="account">Account KYC</option>
+            <option value="service">Service videos</option>
+          </select>
+        </div>
+      </div>
+
+      {isError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+          <p>
+            {kycQuery.isError && `Account review list: ${getErrorMessage(kycQuery.error)} `}
+            {serviceQuery.isError && `Service video list: ${getErrorMessage(serviceQuery.error)}`}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              void kycQuery.refetch();
+              void serviceQuery.refetch();
+            }}
+            className="mt-2 font-semibold underline"
+          >
+            Try again
           </button>
         </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex gap-6 min-h-0 flex-1">
-        
-        {/* Left Column - Queue List */}
-        <div className="w-[580px] flex-shrink-0 bg-white border border-[#CFD4DB] rounded-[12px] flex flex-col overflow-hidden shadow-sm h-full">
-          {/* Header */}
-          <div className="h-[59px] bg-[#4D145D] rounded-t-[11px] px-4 flex items-center justify-between shrink-0 border-b border-[#CFD4DB]">
-            <span className="text-white font-medium text-[15px]">6 Pending Submissions</span>
-            <div className="bg-[#FFE4E6] text-[#E11D48] text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-              Review Required
-            </div>
-          </div>
-          {/* List */}
-          <div className="flex-1 overflow-y-auto flex flex-col hide-scrollbar">
-            {QUEUE_ITEMS.map((item) => (
-              <div 
-                key={item.id}
-                className={`h-[92px] px-[16px] flex items-center justify-between border-b-[0.5px] border-[#F0F1F3] cursor-pointer transition-colors ${
-                  item.isActive 
-                    ? 'bg-[#F4F6F8]' 
-                    : 'bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Image src={item.avatar} alt={item.name} width={44} height={44} className="w-[44px] h-[44px] rounded-full object-cover shrink-0" />
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[14px] font-bold text-[#1E1E1E]">{item.name}</span>
-                      {item.hasAutoBadge && (
-                        <span className="bg-[#E0E7FF] text-[#4F46E5] text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                          Auto
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[12px] text-[#8390A2] font-normal leading-[16px] line-clamp-1 mt-1">{item.type}</span>
-                    <span className="text-[12px] text-[#9B51E0] font-normal leading-[16px] mt-1">{item.servicesCount} services submitted</span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end justify-center shrink-0">
-                  <span className="text-[12px] text-[#8390A2] font-normal leading-[16px]">{item.timeAgo}</span>
-                  <span className="text-[12px] text-[#8390A2] font-normal leading-[16px] mt-1">{item.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Column - Detail Panel */}
-        <div className="flex-1 flex flex-col gap-6 overflow-y-auto hide-scrollbar pb-6">
-          
-          {/* Top Card: Video Player & Profile */}
-          <div className="bg-white border border-[#CFD4DB] rounded-[12px] flex flex-col overflow-hidden shrink-0 shadow-sm">
-            
-            {/* Video Player Section */}
-            <div className="w-full h-[320px] bg-black relative group overflow-hidden">
-              <video 
-                ref={videoRef}
-                className="w-full h-full object-cover"
-                loop 
-                controls
-                playsInline
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                poster="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1200"
-              >
-                <source src="/admin/makeup2.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-              
-              {/* Custom Play/Pause Overlay */}
-              {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-all duration-300 pointer-events-none">
-                  <div 
-                    onClick={togglePlay}
-                    className="w-16 h-16 bg-[#4D145D] bg-opacity-90 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-105 transition-transform duration-200 pointer-events-auto cursor-pointer"
-                  >
-                    <Play className="w-6 h-6 fill-white ml-1" />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-8">
-              {/* Stylist Profile Info */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <Image 
-                    src={QUEUE_ITEMS[0].avatar} 
-                    alt="Blessing Adeyemi" 
-                    width={60}
-                    height={60}
-                    className="w-[60px] h-[60px] rounded-full object-cover ring-4 ring-gray-50 shrink-0"
-                  />
-                  <div>
-                    <h2 className="text-[22px] font-bold text-gray-900 flex items-center gap-2">
-                      Blessing Adeyemi
-                    </h2>
-                    <p className="text-[14px] text-gray-500 font-medium">Extensions & Weaves</p>
-                    <div className="flex items-center gap-4 mt-2">
-                      <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
-                        <MapPin className="w-4 h-4" />
-                        Houston, TX
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
-                        <Mail className="w-4 h-4" />
-                        b.adeyemi@email.com
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-[#FFF4E5] text-[#FF9800] px-4 py-1.5 rounded-full text-[13px] font-bold border border-[#FFE0B2]">
-                  Pending
-                </div>
-              </div>
-
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-x-8 gap-y-5 mt-8">
-                <div>
-                  <label className="text-[13px] font-medium text-gray-500 mb-1.5 block">ID Type</label>
-                  <div className="bg-[#F8F9FA] border border-[#F0F1F3] rounded-xl px-4 py-3 text-[14px] text-gray-700 font-medium">
-                    Driver's License
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-gray-500 mb-1.5 block">ID Uploaded</label>
-                  <div className="bg-[#F8F9FA] border border-[#F0F1F3] rounded-xl px-4 py-3 text-[14px] text-gray-700 font-medium flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    Uploaded
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-gray-500 mb-1.5 block">Bank Account</label>
-                  <div className="bg-[#F8F9FA] border border-[#F0F1F3] rounded-xl px-4 py-3 text-[14px] text-gray-700 font-medium font-mono">
-                    **** 7303
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-gray-500 mb-1.5 block">Referral</label>
-                  <div className="bg-[#F8F9FA] border border-[#F0F1F3] rounded-xl px-4 py-3 text-[14px] text-gray-700 font-medium font-mono">
-                    PLAT-DIR-2794
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Actions */}
-              <div className="flex gap-4 mt-8">
-                <button className="flex-1 h-[40px] bg-[#3BB515] hover:bg-[#2F9111] text-white rounded-[8px] font-bold text-[14px] flex items-center justify-center gap-2 transition-colors">
-                  <CheckCircle2 className="w-[18px] h-[18px]" />
-                  Approve Stylist
-                </button>
-                <button 
-                  onClick={() => setIsRejectModalOpen(true)}
-                  className="flex-1 h-[40px] bg-[#FF332C] hover:bg-[#E52D27] text-white rounded-[8px] font-bold text-[14px] flex items-center justify-center gap-2 transition-colors"
-                >
-                  <XCircle className="w-[18px] h-[18px]" />
-                  Reject
-                </button>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Bottom Card: Services Section */}
-          <div className="bg-[#FFFFF7] border border-[#F3F4F6] rounded-[12px] p-[20px] shadow-sm flex flex-col gap-[16px] shrink-0">
-            <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <h3 className="text-[18px] font-bold text-gray-900">Services Submitted</h3>
-                    <p className="text-[14px] text-gray-500 mt-0.5">Blessing Adeyemi added 2 services from the app</p>
-                  </div>
-                  <span className="bg-[#4D145D] text-white text-[12px] font-bold px-3 py-1 rounded-full">
-                    2 Services
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Service 1 */}
-                  <div className="flex items-start justify-between p-5 bg-[#F8F9FA] border border-[#F0F1F3] rounded-xl">
-                    <div className="flex-1 pr-6">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="text-[16px] font-bold text-gray-900">Knotless Box Braids</h4>
-                        <span className="bg-purple-100 text-[#4D145D] text-[11px] font-bold px-2.5 py-0.5 rounded border border-purple-200">
-                          Braiding
-                        </span>
-                      </div>
-                      <p className="text-[14px] text-gray-600 leading-relaxed mb-3">
-                        Medium length knotless box braids with natural hair included. No pulling, scalp-friendly technique.
-                      </p>
-                      <div className="flex items-center gap-4 text-[14px] font-bold text-gray-900">
-                        <span>$160</span>
-                        <span className="text-[#D1D5DB] text-[16px] leading-none mb-0.5">&bull;</span>
-                        <span className="text-gray-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />3-4 hrs</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <button className="bg-[#3BB515] hover:bg-[#2F9111] text-white px-5 py-2.5 rounded-lg text-[13px] font-bold flex items-center gap-2 transition-colors">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Approve Service
-                      </button>
-                      <button 
-                        onClick={() => setIsRejectModalOpen(true)}
-                        className="bg-[#FF332C] hover:bg-[#E52D27] text-white px-5 py-2.5 rounded-lg text-[13px] font-bold flex items-center gap-2 transition-colors"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Service 2 */}
-                  <div className="flex items-start justify-between p-5 bg-[#F8F9FA] border border-[#F0F1F3] rounded-xl">
-                    <div className="flex-1 pr-6">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="text-[16px] font-bold text-gray-900">Feed-in Cornrows</h4>
-                        <span className="bg-purple-100 text-[#4D145D] text-[11px] font-bold px-2.5 py-0.5 rounded border border-purple-200">
-                          Braiding
-                        </span>
-                      </div>
-                      <p className="text-[14px] text-gray-600 leading-relaxed mb-3">
-                        Small to medium feed-in cornrows with natural hair, finish.
-                      </p>
-                      <div className="flex items-center gap-4 text-[14px] font-bold text-gray-900">
-                        <span>$90</span>
-                        <span className="text-[#D1D5DB] text-[16px] leading-none mb-0.5">&bull;</span>
-                        <span className="text-gray-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />1.5-2 hrs</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <button className="bg-[#3BB515] hover:bg-[#2F9111] text-white px-5 py-2.5 rounded-lg text-[13px] font-bold flex items-center gap-2 transition-colors">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Approve Service
-                      </button>
-                      <button 
-                        onClick={() => setIsRejectModalOpen(true)}
-                        className="bg-[#FF332C] hover:bg-[#E52D27] text-white px-5 py-2.5 rounded-lg text-[13px] font-bold flex items-center gap-2 transition-colors"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Actions (Duplicate as per design) */}
-                <div className="flex gap-4 mt-2 pt-4 border-t border-[#F0F1F3]">
-                  <button className="flex-1 h-[40px] bg-[#3BB515] hover:bg-[#2F9111] text-white rounded-[8px] font-bold text-[14px] flex items-center justify-center gap-2 transition-colors">
-                    <CheckCircle2 className="w-[18px] h-[18px]" />
-                    Approve Stylist
-                  </button>
-                  <button 
-                    onClick={() => setIsRejectModalOpen(true)}
-                    className="flex-1 h-[40px] bg-[#FF332C] hover:bg-[#E52D27] text-white rounded-[8px] font-bold text-[14px] flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <XCircle className="w-[18px] h-[18px]" />
-                    Reject
-                  </button>
-                </div>
-
-          </div>
-        </div>
-      </div>
-      
-      {/* Reject Modal */}
-      {isRejectModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setIsRejectModalOpen(false)}
-        >
-          <div 
-            className="bg-white rounded-[16px] w-[384px] p-6 shadow-xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 cursor-default"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <h3 className="text-[18px] font-bold text-gray-900">Reject Submission</h3>
-              <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* Body */}
-            <div className="flex flex-col gap-4">
-              <p className="text-[14px] text-gray-500 leading-relaxed">
-                Provide a reason for rejecting Blessing Adeyemi's entire submission.
-              </p>
-              
-              <div className="flex flex-col gap-1.5">
-                 <div className="w-full h-[40px] border border-[#CFD4DB] rounded-lg bg-white"></div>
-              </div>
-              
-              <div className="flex flex-col gap-1.5">
-                <textarea 
-                  placeholder="Additional notes for the stylist..."
-                  className="w-full border border-[#CFD4DB] rounded-lg px-4 py-3 text-[14px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#4D145D] resize-none h-[100px]"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center gap-3 mt-2">
-              <button 
-                onClick={() => setIsRejectModalOpen(false)}
-                className="text-[14px] font-medium text-gray-700 bg-white border border-[#D1D5DB] hover:bg-gray-50 rounded-[8px] h-[40px] px-5 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => setIsRejectModalOpen(false)}
-                className="bg-[#FF332C] hover:bg-[#E52D27] text-white rounded-[8px] h-[40px] flex-1 font-bold text-[14px] transition-colors"
-              >
-                Confirm Rejection
-              </button>
-            </div>
-          </div>
+      )}
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+          {errorMessage}
         </div>
       )}
 
-      {/* Hide Scrollbar Styles to match clean design */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-      `}} />
+      <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
+        <section className="flex max-h-[60vh] w-full shrink-0 flex-col overflow-hidden rounded-[12px] border border-[#CFD4DB] bg-white shadow-sm lg:max-h-none lg:h-full lg:w-[580px]">
+          <div className="flex h-[59px] shrink-0 items-center justify-between rounded-t-[11px] border-b border-[#CFD4DB] bg-[#4D145D] px-4">
+            <span className="text-[15px] font-medium text-white">
+              {visibleQueue.length} Pending Submissions
+            </span>
+            <div className="rounded-full bg-[#FFE4E6] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#E11D48]">
+              Review Required
+            </div>
+          </div>
+          <div className="hide-scrollbar flex-1 overflow-y-auto">
+            {isLoading &&
+              Array.from({ length: 5 }, (_, index) => (
+                <div key={`queue-skeleton-${index}`} className="flex h-[92px] items-center gap-3 border-b border-[#F0F1F3] px-4" aria-hidden="true">
+                  <div className="h-11 w-11 animate-pulse rounded-full bg-gray-200" />
+                  <div className="flex-1 space-y-2"><div className="h-4 animate-pulse rounded bg-gray-200" /><div className="h-3 w-2/3 animate-pulse rounded bg-gray-200" /></div>
+                </div>
+              ))}
+            {!isLoading && visibleQueue.length === 0 && (
+              <div className="px-5 py-14 text-center">
+                <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-[#3BB515]" aria-hidden="true" />
+                <p className="font-semibold text-gray-800">No reviews waiting</p>
+                <p className="mt-1 text-sm text-gray-500">New account and service submissions will appear here.</p>
+              </div>
+            )}
+            {visibleQueue.map((group) => {
+              const isSelected = selectedGroup?.user.userId === group.user.userId;
+              const latestService = group.services[0];
+              return (
+                <button
+                  type="button"
+                  key={group.user.userId}
+                  onClick={() => selectGroup(group)}
+                  aria-pressed={isSelected}
+                  className={`flex min-h-[92px] w-full items-center justify-between border-b-[0.5px] border-[#F0F1F3] px-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#4D145D] ${
+                    isSelected ? "bg-[#F4F6F8]" : "bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    {group.user.avatar ? (
+                      <Image src={group.user.avatar} alt="" width={44} height={44} className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F3F0FF] font-bold text-[#4D145D]" aria-hidden="true">{group.user.name.slice(0, 1).toUpperCase()}</span>
+                    )}
+                    <span className="flex min-w-0 flex-col">
+                      <span className="flex items-center gap-2">
+                        <span className="truncate text-[14px] font-bold text-[#1E1E1E]">{group.user.name}</span>
+                        {group.accountPending && <span className="rounded bg-[#E0E7FF] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#4F46E5]">KYC</span>}
+                      </span>
+                      <span className="mt-1 line-clamp-1 text-[12px] leading-[16px] text-[#8390A2]">{latestService?.serviceName ?? "Account verification"}</span>
+                      <span className="mt-1 text-[12px] leading-[16px] text-[#9B51E0]">
+                        {group.services.length} service{group.services.length === 1 ? "" : "s"} submitted
+                      </span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 pl-2 text-right text-[11px] leading-5 text-[#8390A2]">
+                    {latestService ? formatTime(latestService.createdAt) : "KYC review"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between border-t border-[#F0F1F3] px-4 py-3">
+            <span className="text-xs text-gray-500">
+              {totalPages ? `Page ${page} of ${totalPages}` : "No additional pages"}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={page <= 1 || isLoading}
+                className="rounded border border-gray-200 px-3 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                disabled={!totalPages || page >= totalPages || isLoading}
+                className="rounded border border-gray-200 px-3 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="hide-scrollbar min-w-0 flex-1 space-y-6 overflow-y-auto pb-6" aria-label="Selected verification details">
+          {!selectedGroup && !isLoading && (
+            <div className="flex min-h-64 items-center justify-center rounded-[12px] border border-[#CFD4DB] bg-white p-8 text-center text-sm text-gray-500">
+              Select a pending submission to review its details.
+            </div>
+          )}
+          {selectedGroup && (
+            <>
+              <div className="shrink-0 overflow-hidden rounded-[12px] border border-[#CFD4DB] bg-white shadow-sm">
+                <div className="relative flex h-[320px] items-center justify-center overflow-hidden bg-black">
+                  {selectedService?.verificationVideoUrl ? (
+                    <video key={selectedService.verificationVideoUrl} className="h-full w-full object-contain" controls playsInline src={selectedService.verificationVideoUrl}>
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <div className="px-6 text-center text-sm text-white/70">
+                      <Play className="mx-auto mb-2 h-8 w-8" aria-hidden="true" />
+                      No verification video attached to this submission.
+                    </div>
+                  )}
+                </div>
+                <div className="p-6 md:p-8">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      {selectedGroup.user.avatar ? (
+                        <Image src={selectedGroup.user.avatar} alt="" width={60} height={60} className="h-[60px] w-[60px] shrink-0 rounded-full object-cover ring-4 ring-gray-50" />
+                      ) : (
+                        <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full bg-[#F3F0FF] text-xl font-bold text-[#4D145D]" aria-hidden="true">{selectedGroup.user.name.slice(0, 1).toUpperCase()}</div>
+                      )}
+                      <div>
+                        <h2 className="flex items-center gap-2 text-[22px] font-bold text-gray-900">{selectedGroup.user.name}</h2>
+                        <p className="text-[14px] font-medium text-gray-500">{selectedService?.serviceName ?? "Stylist account review"}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <span className="flex items-center gap-1.5 text-[13px] text-gray-500"><MapPin className="h-4 w-4" />{selectedDetail.data?.location ?? selectedGroup.user.location ?? "—"}</span>
+                          <span className="flex items-center gap-1.5 text-[13px] text-gray-500"><Mail className="h-4 w-4" />{selectedGroup.user.email}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-full border border-[#FFE0B2] bg-[#FFF4E5] px-4 py-1.5 text-[13px] font-bold text-[#FF9800]">
+                      {selectedGroup.accountPending ? "Account & service review" : "Service review"}
+                    </div>
+                  </div>
+
+                  {selectedDetail.isLoading && <div className="mt-6 h-20 animate-pulse rounded-xl bg-gray-100" aria-label="Loading stylist verification details" />}
+                  {selectedDetail.isError && (
+                    <p className="mt-4 text-sm text-red-700" role="alert">
+                      {getErrorMessage(selectedDetail.error)}
+                      <button type="button" onClick={() => void selectedDetail.refetch()} className="ml-2 font-semibold underline">Try again</button>
+                    </p>
+                  )}
+                  <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-[13px] font-medium text-gray-500">ID Document</label>
+                      <div className="rounded-xl border border-[#F0F1F3] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium text-gray-700">
+                        {selectedDetail.data?.idDocumentUrl ? (
+                          <a href={selectedDetail.data.idDocumentUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline">View uploaded ID</a>
+                        ) : "No document submitted"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[13px] font-medium text-gray-500">KYC Status</label>
+                      <div className="flex items-center gap-2 rounded-xl border border-[#F0F1F3] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium text-gray-700">
+                        {selectedDetail.data?.isKycApproved ? "Approved" : selectedGroup.accountPending ? "Pending review" : "Not approved"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[13px] font-medium text-gray-500">Bank Account</label>
+                      <div className="rounded-xl border border-[#F0F1F3] bg-[#F8F9FA] px-4 py-3 font-mono text-[14px] font-medium text-gray-700">
+                        {selectedDetail.data?.bank.maskedAccount
+                          ? `${selectedDetail.data.bank.bankName ?? "Bank"} · ${selectedDetail.data.bank.maskedAccount} · ${selectedDetail.data.bank.isVerified ? "Verified" : "Unverified"}`
+                          : "No bank details submitted"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[13px] font-medium text-gray-500">Referral</label>
+                      <div className="rounded-xl border border-[#F0F1F3] bg-[#F8F9FA] px-4 py-3 font-mono text-[14px] font-medium text-gray-700">
+                        {selectedDetail.data?.referredBy?.agentCode ?? "No referral"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedGroup.accountPending && (
+                    <div className="mt-8 flex flex-wrap gap-4">
+                      <button type="button" disabled={isMutating} onClick={() => void approveAccount()} className="flex h-[40px] flex-1 items-center justify-center gap-2 rounded-[8px] bg-[#3BB515] text-[14px] font-bold text-white transition-colors hover:bg-[#2F9111] disabled:opacity-50">
+                        <CheckCircle2 className="h-[18px] w-[18px]" /> Approve Stylist
+                      </button>
+                      <button type="button" disabled={isMutating} onClick={() => openReject({ kind: "account", userId: selectedGroup.user.userId })} className="flex h-[40px] flex-1 items-center justify-center gap-2 rounded-[8px] bg-[#FF332C] text-[14px] font-bold text-white transition-colors hover:bg-[#E52D27] disabled:opacity-50">
+                        <XCircle className="h-[18px] w-[18px]" /> Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 rounded-[12px] border border-[#F3F4F6] bg-[#FFFFF7] p-5 shadow-sm">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-[18px] font-bold text-gray-900">Services Submitted</h3>
+                    <p className="mt-0.5 text-[14px] text-gray-500">{selectedGroup.services.length} service{selectedGroup.services.length === 1 ? "" : "s"} awaiting review</p>
+                  </div>
+                  <span className="rounded-full bg-[#4D145D] px-3 py-1 text-[12px] font-bold text-white">{selectedGroup.services.length} Services</span>
+                </div>
+                {selectedGroup.services.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+                    This account has no pending service videos.
+                  </div>
+                ) : (
+                  selectedGroup.services.map((service) => (
+                    <div key={service.id} className="flex flex-col justify-between gap-4 rounded-xl border border-[#F0F1F3] bg-[#F8F9FA] p-5 lg:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedServiceId(service.id)}
+                        aria-pressed={selectedService?.id === service.id}
+                        className="min-w-0 flex-1 pr-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+                      >
+                        <span className="mb-2 flex flex-wrap items-center gap-3">
+                          <span className="text-[16px] font-bold text-gray-900">{service.serviceName}</span>
+                          <span className="rounded border border-purple-200 bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold text-[#4D145D]">{service.userType}</span>
+                        </span>
+                        <span className="mb-3 block text-[14px] leading-relaxed text-gray-600">{service.description || "No service description provided."}</span>
+                        <span className="flex flex-wrap items-center gap-3 text-[14px] font-bold text-gray-900">
+                          <span>{formatNaira(service.price)}</span>
+                          <span className="text-[#D1D5DB]">&bull;</span>
+                          <span className="flex items-center gap-1.5 text-gray-500"><Clock className="h-3.5 w-3.5" />{service.serviceDuration}</span>
+                          <span className="text-xs font-normal text-gray-400">Home add-on {formatNaira(service.homeServiceAddon)}</span>
+                        </span>
+                      </button>
+                      <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+                        <button type="button" disabled={isMutating} onClick={() => void approveService(service.id)} className="flex items-center justify-center gap-2 rounded-lg bg-[#3BB515] px-5 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#2F9111] disabled:opacity-50">
+                          <CheckCircle2 className="h-4 w-4" /> Approve Service
+                        </button>
+                        <button type="button" disabled={isMutating} onClick={() => openReject({ kind: "service", serviceId: service.id })} className="flex items-center justify-center gap-2 rounded-lg bg-[#FF332C] px-5 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#E52D27] disabled:opacity-50">
+                          <XCircle className="h-4 w-4" /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3" onMouseDown={(event) => event.target === event.currentTarget && setRejectTarget(null)}>
+          <form onSubmit={submitReject} className="flex w-full max-w-[384px] flex-col gap-5 rounded-[16px] bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <h3 className="text-[18px] font-bold text-gray-900">Reject Submission</h3>
+              <button type="button" onClick={() => setRejectTarget(null)} aria-label="Close reject dialog" className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+            <p className="text-[14px] leading-relaxed text-gray-500">
+              {rejectTarget.kind === "account"
+                ? "Provide a reason for rejecting this stylist account. At least 5 characters are required."
+                : "Provide an admin note for rejecting this service video. At least 5 characters are required."}
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              minLength={5}
+              maxLength={1000}
+              required
+              autoFocus
+              className="h-[100px] w-full resize-none rounded-lg border border-[#CFD4DB] px-4 py-3 text-[14px] text-gray-900 placeholder:text-gray-400 focus:border-[#4D145D] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+              placeholder="Enter rejection reason..."
+              aria-label="Rejection reason"
+            />
+            {errorMessage && <p className="text-sm text-red-700" role="alert">{errorMessage}</p>}
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setRejectTarget(null)} className="h-[40px] rounded-[8px] border border-[#D1D5DB] bg-white px-5 text-[14px] font-medium text-gray-700 transition-colors hover:bg-gray-50">Cancel</button>
+              <button type="submit" disabled={rejectReason.trim().length < 5 || isMutating} className="h-[40px] flex-1 rounded-[8px] bg-[#FF332C] text-[14px] font-bold text-white transition-colors hover:bg-[#E52D27] disabled:opacity-50">
+                {isMutating ? "Submitting…" : "Confirm Rejection"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      ` }} />
     </div>
   );
 }

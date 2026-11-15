@@ -14,7 +14,7 @@ export interface Performer {
   category: string;
   revenue: string;
   rating: number;
-  status: "Verified" | "Approved";
+  status: string;
   type: PerformerType;
   avatarBg: string; // Tailwind color class for initials badge
 }
@@ -23,6 +23,13 @@ export interface Performer {
 interface TopPerformersTableProps {
   data?: Performer[];
   className?: string;
+}
+
+function statusClass(status: string): string {
+  if (status === "Active") return "bg-[#E8F8F0] text-[#10B981] border-[#D1F2E0]";
+  if (status === "Pending Approval") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (status === "Suspend" || status === "Rejected") return "bg-red-50 text-red-700 border-red-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
 export function TopPerformersTable({
@@ -83,7 +90,7 @@ export function TopPerformersTable({
           <thead>
             <tr className="border-b border-gray-100 text-xs font-semibold text-gray-400">
               <th className="pb-4 font-semibold w-[35%]">Name</th>
-              <th className="pb-4 font-semibold w-[25%]">Category</th>
+              <th className="pb-4 font-semibold w-[25%]">Specialty / Store</th>
               <th className="pb-4 font-semibold w-[15%]">Revenue</th>
               <th className="pb-4 font-semibold w-[12%]">Rating</th>
               <th className="pb-4 font-semibold w-[13%] text-right sm:text-left">
@@ -135,7 +142,7 @@ export function TopPerformersTable({
 
                   {/* Status Tag */}
                   <td className="py-4 text-right sm:text-left">
-                    <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-[#E8F8F0] text-[#10B981] border border-[#D1F2E0]">
+                    <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold border ${statusClass(row.status)}`}>
                       {row.status}
                     </span>
                   </td>

@@ -8,13 +8,14 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
+import { formatCount, formatNaira } from "@/lib/admin/dashboard";
 
 interface OverviewChartProps {
-    data: any[];
+    data: Array<{ name: string; value: number }>;
     chartName: string;
     strokeColor?: string;
     fillColor?: string;
-    year?: number;
+    valueType: "currency" | "count";
 }
 
 export default function OverviewChart({ 
@@ -22,7 +23,7 @@ export default function OverviewChart({
     chartName, 
     strokeColor = "#4D145D", 
     fillColor, 
-    year = 2026 
+    valueType,
 }: OverviewChartProps) {
     const baseColor = strokeColor || fillColor || "#4D145D";
     const gradientId = `overviewGradient-${chartName.replace(/\s+/g, '')}`;
@@ -32,12 +33,15 @@ export default function OverviewChart({
             <div className="flex justify-between items-start mb-5 shrink-0">
                 <div>
                     <h3 className="text-[18px] font-bold text-gray-900 leading-tight">{chartName} Overview</h3>
-                    <p className="text-[13px] text-[#8390A2] mt-1">Service + Marketplace {chartName} · {year}</p>
+                    <p className="text-[13px] text-[#8390A2] mt-1">Monthly {chartName.toLowerCase()} performance</p>
                 </div>
             </div>
 
-            {/* Recharts Area/Line Chart */}
-            <div className="flex-1 w-full min-h-0 -ml-2.5">
+            {data.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center text-sm text-gray-500" role="status">
+                    No {chartName.toLowerCase()} data is available for this period.
+                </div>
+            ) : <div className="flex-1 w-full min-h-0 -ml-2.5">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
@@ -58,13 +62,18 @@ export default function OverviewChart({
                             axisLine={false}
                             tickLine={false}
                             tick={{ fill: '#8390A2', fontSize: 11 }}
-                            tickFormatter={(value) => `$${value >= 1000 ? `${value / 1000}k` : value}`}
+                            tickFormatter={(value: number) => valueType === "currency"
+                              ? value === 0 ? "₦0" : `₦${Math.round(value / 1000)}k`
+                              : formatCount(value)}
                             dx={-10}
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             labelStyle={{ color: '#8390A2', fontSize: '12px', marginBottom: '4px' }}
-                            formatter={(value: any) => [`$${Number(value).toLocaleString()}`, chartName]}
+                            formatter={(value) => [
+                              valueType === "currency" ? formatNaira(Number(value)) : formatCount(Number(value)),
+                              chartName,
+                            ]}
                         />
                         <Area
                             type="monotone"
@@ -77,7 +86,7 @@ export default function OverviewChart({
                         />
                     </AreaChart>
                 </ResponsiveContainer>
-            </div>
+            </div>}
         </div>
     );
 }

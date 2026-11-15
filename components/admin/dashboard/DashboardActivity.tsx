@@ -1,132 +1,358 @@
 "use client";
 
-import Image from "next/image";
-import { Video, Store, ShoppingCart, FileText, BarChart2, AlertTriangle, CheckCircle, Key, DollarSign } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  BarChart2,
+  CalendarDays,
+  CheckCircle,
+  DollarSign,
+  FileText,
+  Key,
+  ShoppingCart,
+  Store,
+  Video,
+} from "lucide-react";
+import type {
+  DashboardActivityEntry,
+  DashboardOrder,
+  DashboardPendingApproval,
+} from "@/lib/api/contracts";
+import { formatNaira } from "@/lib/admin/dashboard";
 import { PendingApprovals } from "./PendingApprovals";
 
-const recentOrders = [
-  { id: "ORD-5001", name: "Amara Johnson", email: "sarah.j@email.com", product: "Kanekalon Braiding Hair 3X (×3)", amount: "$37.50", status: "Confirmed", statusBg: "bg-[#1E3A8A]", statusText: "text-white" },
-  { id: "ORD-5002", name: "Nkechi Obi", email: "sarah.j@email.com", product: "Premium Loc Extension Pack (×2)", amount: "$44.00", status: "Active", statusBg: "bg-[#166534]", statusText: "text-white" },
-  { id: "ORD-5003", name: "Fatima Al-Hassan", email: "sarah.j@email.com", product: "Jamaican Black Castor Oil Set (×1)", amount: "$24.99", status: "Completed", statusBg: "bg-[#0F766E]", statusText: "text-white" },
-  { id: "ORD-5004", name: "Nkechi Obi", email: "sarah.j@email.com", product: "Shea Butter Edge Control (×4)", amount: "$75.96", status: "Dispatched", statusBg: "bg-[#701A75]", statusText: "text-white" },
-  { id: "ORD-5005", name: "Sarah Johnson", email: "sarah.j@email.com", product: "Marley Braid Hair Pack (×6)", amount: "$59.94", status: "Delivered", statusBg: "bg-[#22C55E]", statusText: "text-white" },
-  { id: "ORD-5006", name: "Fatima Al-Hassan", email: "sarah.j@email.com", product: "Scalp Oil Serum (×1)", amount: "$29.99", status: "Processing", statusBg: "bg-[#B45309]", statusText: "text-white" },
+interface DashboardActivityProps {
+  orders?: DashboardOrder[];
+  approvals?: DashboardPendingApproval[];
+  activity?: DashboardActivityEntry[];
+  ordersLoading: boolean;
+  approvalsLoading: boolean;
+  activityLoading: boolean;
+  ordersError?: string | null;
+  approvalsError?: string | null;
+  activityError?: string | null;
+  retryOrders: () => void;
+  retryApprovals: () => void;
+  retryActivity: () => void;
+}
+
+const QUICK_ACTIONS = [
+  { label: "Video Queue", href: "/dashboard/video-verification", icon: Video, bg: "bg-[#FFE4E6]", text: "text-[#E11D48]" },
+  { label: "New Vendors", href: "/dashboard/vendors", icon: Store, bg: "bg-[#F3E8FF]", text: "text-[#9333EA]" },
+  { label: "Product Orders", href: "/dashboard/orders", icon: ShoppingCart, bg: "bg-[#E0E7FF]", text: "text-[#4F46E5]" },
+  { label: "Escrow", href: "/dashboard/payments", icon: FileText, bg: "bg-[#FFEDD5]", text: "text-[#D97706]" },
+  { label: "Analytics", href: "/dashboard/analytics", icon: BarChart2, bg: "bg-[#DCFCE7]", text: "text-[#16A34A]" },
+  { label: "Disputes", href: "/dashboard/support", icon: AlertTriangle, bg: "bg-[#FFE4E6]", text: "text-[#E11D48]" },
 ];
 
-const quickActions = [
-  { label: "Video Queue", icon: Video, bg: "bg-[#FFE4E6]", text: "text-[#E11D48]" },
-  { label: "New Vendors", icon: Store, bg: "bg-[#F3E8FF]", text: "text-[#9333EA]" },
-  { label: "Product Orders", icon: ShoppingCart, bg: "bg-[#E0E7FF]", text: "text-[#4F46E5]" },
-  { label: "Escrow", icon: FileText, bg: "bg-[#FFEDD5]", text: "text-[#D97706]" },
-  { label: "Analytics", icon: BarChart2, bg: "bg-[#DCFCE7]", text: "text-[#16A34A]" },
-  { label: "Disputes", icon: AlertTriangle, bg: "bg-[#FFE4E6]", text: "text-[#E11D48]" },
-];
+const ORDER_STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-[#1E3A8A]",
+  PROCESSING: "bg-[#166534]",
+  SHIPPED: "bg-[#701A75]",
+  OUT_FOR_DELIVERY: "bg-[#B45309]",
+  DELIVERED: "bg-[#22C55E]",
+  CANCELLED: "bg-[#6B7280]",
+};
 
-const recentActivity = [
-  { title: "Vendor approved", desc: "Afro Queen Cosmetics", time: "2m ago", icon: Store, iconColor: "text-green-500", iconBg: "bg-green-50" },
-  { title: "OTP confirmed", desc: "ORD-5002 delivered", time: "22m ago", icon: Key, iconColor: "text-blue-500", iconBg: "bg-blue-50" },
-  { title: "New vendor registered", desc: "KinkyCurly Boutique", time: "45m ago", icon: Store, iconColor: "text-purple-500", iconBg: "bg-purple-50" },
-  { title: "Escrow released", desc: "$44 → BraidQueen", time: "1h ago", icon: DollarSign, iconColor: "text-blue-500", iconBg: "bg-blue-50" },
-  { title: "Stylist verified", desc: "Kezia Okafor", time: "3h ago", icon: CheckCircle, iconColor: "text-green-500", iconBg: "bg-green-50" },
-];
+function displayStatus(status: string): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
-export function DashboardActivity() {
+function formatCreatedAt(value: string): string {
+  const timestamp = new Date(value);
+  if (!Number.isFinite(timestamp.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Lagos",
+  }).format(timestamp);
+}
+
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase();
+}
+
+function orderProductSummary(order: DashboardOrder): string {
+  const [first, ...remaining] = order.items;
+  if (!first) return "No product items recorded";
+  const quantity = first.quantity > 1 ? ` (×${first.quantity})` : "";
+  const rest = remaining.length > 0 ? ` +${remaining.length} more` : "";
+  return `${first.name}${quantity}${rest}`;
+}
+
+function ActivityIcon({ entityType }: { entityType: string }) {
+  const normalizedType = entityType.toLowerCase();
+  const Icon =
+    normalizedType.includes("order") || normalizedType.includes("booking")
+      ? CalendarDays
+      : normalizedType.includes("payout") || normalizedType.includes("escrow")
+        ? DollarSign
+        : normalizedType.includes("vendor")
+          ? Store
+          : normalizedType.includes("verification") || normalizedType.includes("stylist")
+            ? CheckCircle
+            : normalizedType.includes("ticket") || normalizedType.includes("dispute")
+              ? AlertTriangle
+              : Key;
+
+  return <Icon className="h-[14px] w-[14px] text-blue-500" strokeWidth={2} />;
+}
+
+function SectionError({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
   return (
-    <div className="flex flex-col gap-[24px] mb-[24px]">
-      {/* Top Row: Recent Orders (Left) & Quick Actions/Activity (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-[24px]">
+    <div className="p-5 text-sm text-red-700" role="alert">
+      <p>{message}</p>
+      <button
+        className="mt-2 font-semibold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-primary"
+        onClick={onRetry}
+        type="button"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
 
-        {/* Recent Orders - 2/3 width */}
-        <div className="lg:col-span-2 bg-[#FFFFF7] rounded-[8px] shadow border border-[#E4E6E7] p-[16px] flex flex-col h-[570px]">
-          <h3 className="text-[18px] font-bold text-gray-900 mb-[18px] shrink-0">Recent Orders</h3>
-          <div className="overflow-hidden rounded-[8px] flex-1">
-            <div className="overflow-y-auto h-full no-scrollbar">
-              <table className="w-full text-left border-collapse">
+function OrderRowSkeleton() {
+  return (
+    <tr className="animate-pulse">
+      {[0, 1, 2, 3, 4].map((cell) => (
+        <td className="px-[16px] py-[16px]" key={cell}>
+          <div className="h-4 rounded bg-gray-200" />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+export function DashboardActivity({
+  orders,
+  approvals,
+  activity,
+  ordersLoading,
+  approvalsLoading,
+  activityLoading,
+  ordersError,
+  approvalsError,
+  activityError,
+  retryOrders,
+  retryApprovals,
+  retryActivity,
+}: DashboardActivityProps) {
+  return (
+    <div className="mb-[24px] flex flex-col gap-[24px]">
+      <div className="grid grid-cols-1 gap-[24px] lg:grid-cols-3">
+        <div className="flex h-[570px] flex-col rounded-[8px] border border-[#E4E6E7] bg-[#FFFFF7] p-[16px] shadow lg:col-span-2">
+          <h3 className="mb-[18px] shrink-0 text-[18px] font-bold text-gray-900">
+            Recent Orders
+          </h3>
+          <div className="flex-1 overflow-hidden rounded-[8px]">
+            <div className="no-scrollbar h-full overflow-x-auto overflow-y-auto">
+              <table className="w-full min-w-[700px] border-collapse text-left">
                 <thead>
-                  <tr className="bg-[#4D145D] text-white text-[13px] font-medium sticky top-0 z-10">
-                    <th className="py-[12px] px-[16px] font-medium whitespace-nowrap w-[15%]">Order ID</th>
-                    <th className="py-[12px] px-[16px] font-medium w-[30%]">Customer</th>
-                    <th className="py-[12px] px-[16px] font-medium text-center w-[30%]">Product</th>
-                    <th className="py-[12px] px-[16px] font-medium text-center w-[15%]">Amount</th>
-                    <th className="py-[12px] px-[16px] font-medium text-center w-[10%]">Status</th>
+                  <tr className="sticky top-0 z-10 bg-[#4D145D] text-[13px] font-medium text-white">
+                    <th className="w-[15%] whitespace-nowrap px-[16px] py-[12px] font-medium">Order ID</th>
+                    <th className="w-[30%] px-[16px] py-[12px] font-medium">Customer</th>
+                    <th className="w-[30%] px-[16px] py-[12px] text-center font-medium">Product</th>
+                    <th className="w-[15%] px-[16px] py-[12px] text-center font-medium">Amount</th>
+                    <th className="w-[10%] px-[16px] py-[12px] text-center font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
-                  {recentOrders.map((order, i) => (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-[16px] px-[16px]">
-                        <span className="text-[#D95C30] font-medium text-[13px]">{order.id}</span>
-                      </td>
-                      <td className="py-[16px] px-[16px]">
-                        <div className="flex items-center gap-[12px]">
-                          <div className="w-[36px] h-[36px] rounded-full overflow-hidden bg-gray-100 flex-shrink-0 relative">
-                            <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${order.name}`} alt={order.name} fill className="object-cover" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[13px] font-semibold text-gray-900">{order.name}</span>
-                            <span className="text-[11px] text-[#8390A2]">{order.email}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-[16px] px-[16px] text-center">
-                        <span className="text-[12px] text-gray-700 leading-tight block max-w-[160px] mx-auto">{order.product}</span>
-                      </td>
-                      <td className="py-[16px] px-[16px] text-center">
-                        <span className="text-[14px] font-bold text-gray-900">{order.amount}</span>
-                      </td>
-                      <td className="py-[16px] px-[16px] text-center">
-                        <span className={`inline-flex items-center justify-center px-[12px] py-[4px] rounded-full text-[11px] font-medium ${order.statusBg} ${order.statusText} w-[80px]`}>
-                          {order.status}
-                        </span>
+                  {ordersLoading && !orders ? (
+                    [0, 1, 2, 3, 4].map((row) => <OrderRowSkeleton key={row} />)
+                  ) : ordersError && !orders ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <SectionError message={ordersError} onRetry={retryOrders} />
                       </td>
                     </tr>
-                  ))}
+                  ) : !orders ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <SectionError message="Recent orders are unavailable." onRetry={retryOrders} />
+                      </td>
+                    </tr>
+                  ) : orders?.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-sm text-gray-500" role={ordersError ? "alert" : "status"}>
+                        {ordersError ? (
+                          <>
+                            No recent orders are available. {ordersError}
+                            <button className="ml-2 font-semibold underline" onClick={retryOrders} type="button">
+                              Retry
+                            </button>
+                          </>
+                        ) : "No recent orders."}
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {ordersError && (
+                        <tr>
+                          <td colSpan={5} className="bg-amber-50 p-3 text-sm text-amber-800" role="alert">
+                            Showing the last loaded orders. {ordersError}
+                            <button className="ml-2 font-semibold underline" onClick={retryOrders} type="button">
+                              Retry
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                      {orders?.map((order) => (
+                        <tr className="transition-colors hover:bg-gray-50" key={order.id}>
+                          <td className="px-[16px] py-[16px]">
+                            <Link
+                              className="text-[13px] font-medium text-[#D95C30] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-primary"
+                              href="/dashboard/orders"
+                            >
+                              {order.orderNumber}
+                            </Link>
+                          </td>
+                          <td className="px-[16px] py-[16px]">
+                            <div className="flex items-center gap-[12px]">
+                                <div className="flex h-[36px] w-[36px] flex-shrink-0 items-center justify-center rounded-full bg-[#F3E8FF] text-[12px] font-semibold text-[#4D145D]">
+                                  {getInitials(order.customer.name)}
+                              </div>
+                              <div className="flex min-w-0 flex-col">
+                                <span className="truncate text-[13px] font-semibold text-gray-900">
+                                  {order.customer.name}
+                                </span>
+                                <span className="truncate text-[11px] text-[#8390A2]">
+                                  {order.customer.email}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-[16px] py-[16px] text-center">
+                            <span className="mx-auto block max-w-[160px] text-[12px] leading-tight text-gray-700">
+                              {orderProductSummary(order)}
+                            </span>
+                          </td>
+                          <td className="px-[16px] py-[16px] text-center">
+                            <span className="text-[14px] font-bold text-gray-900">
+                              {formatNaira(order.totalAmount)}
+                            </span>
+                          </td>
+                          <td className="px-[16px] py-[16px] text-center">
+                            <span className={`inline-flex w-[96px] items-center justify-center rounded-full px-[10px] py-[4px] text-[11px] font-medium text-white ${ORDER_STATUS_COLORS[order.orderStatus] ?? "bg-gray-600"}`}>
+                              {displayStatus(order.orderStatus)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        {/* Right Column (Quick Actions & Recent Activity) - 1/3 width */}
-        <div className="lg:col-span-1 flex flex-col gap-[24px]">
-          {/* Quick Actions */}
-          <div className="bg-[#FFFFF7] rounded-[8px] shadow border border-[#E4E6E7] p-[16px] shrink-0">
-            <h3 className="text-[18px] font-bold text-gray-900 mb-[16px]">Quick Actions</h3>
+        <div className="flex flex-col gap-[24px] lg:col-span-1">
+          <div className="shrink-0 rounded-[8px] border border-[#E4E6E7] bg-[#FFFFF7] p-[16px] shadow">
+            <h3 className="mb-[16px] text-[18px] font-bold text-gray-900">
+              Quick Actions
+            </h3>
             <div className="grid grid-cols-3 gap-[12px]">
-              {quickActions.map((action, i) => (
-                <button key={i} className={`flex items-center justify-center gap-[6px] py-[10px] px-[8px] rounded-[8px] ${action.bg} hover:opacity-80 transition-opacity`}>
-                  <action.icon className={`w-[14px] h-[14px] ${action.text}`} strokeWidth={2} />
-                  <span className={`text-[11px] font-semibold ${action.text} whitespace-nowrap`}>{action.label}</span>
-                </button>
+              {QUICK_ACTIONS.map((action) => (
+                <Link
+                  className={`flex items-center justify-center gap-[6px] rounded-[8px] px-[8px] py-[10px] transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-primary ${action.bg}`}
+                  href={action.href}
+                  key={action.label}
+                >
+                  <action.icon className={`h-[14px] w-[14px] ${action.text}`} strokeWidth={2} />
+                  <span className={`whitespace-nowrap text-[11px] font-semibold ${action.text}`}>
+                    {action.label}
+                  </span>
+                </Link>
               ))}
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <div className="bg-[#FFFFF7] rounded-[8px] shadow border border-[#E4E6E7] p-[16px] flex-1">
-            <h3 className="text-[18px] font-bold text-gray-900 mb-[20px]">Recent Activity</h3>
-            <div className="flex flex-col gap-[18px]">
-              {recentActivity.map((activity, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-[12px] min-w-0">
-                    <div className={`w-[28px] h-[28px] rounded-[6px] ${activity.iconBg} flex items-center justify-center flex-shrink-0`}>
-                      <activity.icon className={`w-[14px] h-[14px] ${activity.iconColor}`} strokeWidth={2} />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[13px] font-semibold text-gray-900 truncate">{activity.title}</span>
-                      <span className="text-[11px] text-[#8390A2] truncate">{activity.desc}</span>
+          <div className="flex-1 rounded-[8px] border border-[#E4E6E7] bg-[#FFFFF7] p-[16px] shadow">
+            <h3 className="mb-[20px] text-[18px] font-bold text-gray-900">
+              Recent Activity
+            </h3>
+            {activityLoading && !activity ? (
+              <div className="flex flex-col gap-[18px]" aria-label="Loading recent activity">
+                {[0, 1, 2, 3, 4].map((item) => (
+                  <div className="flex animate-pulse items-center gap-3" key={item}>
+                    <div className="h-7 w-7 rounded bg-gray-200" />
+                    <div className="flex-1">
+                      <div className="h-3 w-2/3 rounded bg-gray-200" />
+                      <div className="mt-2 h-3 w-1/2 rounded bg-gray-100" />
                     </div>
                   </div>
-                  <span className="text-[11px] text-gray-400 whitespace-nowrap ml-[8px]">{activity.time}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : activityError && !activity ? (
+              <SectionError message={activityError} onRetry={retryActivity} />
+            ) : (
+              <>
+                {activityError && (
+                  <p className="mb-3 text-xs text-amber-800" role="alert">
+                    Showing last loaded activity. {activityError}
+                    <button className="ml-2 font-semibold underline" onClick={retryActivity} type="button">
+                      Retry
+                    </button>
+                  </p>
+                )}
+                {!activity ? (
+                  <SectionError message="Recent activity is unavailable." onRetry={retryActivity} />
+                ) : activity.length === 0 ? (
+                  <p className="rounded-md bg-gray-50 p-5 text-center text-sm text-gray-500" role="status">
+                    No recent activity.
+                  </p>
+                ) : <div className="flex flex-col gap-[18px]">
+                  {activity.map((item) => (
+                    <div className="flex items-center justify-between gap-2" key={item.id}>
+                      <div className="flex min-w-0 items-center gap-[12px]">
+                        <div className="flex h-[28px] w-[28px] flex-shrink-0 items-center justify-center rounded-[6px] bg-blue-50">
+                          <ActivityIcon entityType={item.entityType} />
+                        </div>
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-[13px] font-semibold text-gray-900">
+                            {displayStatus(item.action)}
+                          </span>
+                          <span className="truncate text-[11px] text-[#8390A2]">
+                            {item.reason ?? `${displayStatus(item.entityType)}${item.entityId ? ` · ${item.entityId}` : ""}`}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="ml-[8px] whitespace-nowrap text-[11px] text-gray-400">
+                        {formatCreatedAt(item.createdAt)}
+                      </span>
+                    </div>
+                  ))}
+                </div>}
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Bottom Row: Pending Approvals (Restricted to 2/3 width) */}
-          <PendingApprovals />
+      <PendingApprovals
+        items={approvals}
+        isLoading={approvalsLoading}
+        error={approvalsError}
+        onRetry={retryApprovals}
+      />
     </div>
   );
 }

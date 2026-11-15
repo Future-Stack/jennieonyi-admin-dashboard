@@ -1,297 +1,96 @@
 "use client";
-import React, { useState } from 'react';
-import { Search, Filter, Download, Eye, RefreshCw } from 'lucide-react';
-import Image from 'next/image';
-import { BookingDetailsModal } from '@/components/admin/bookings/BookingDetailsModal';
 
-const BOOKINGS_DATA = [
-  {
-    id: 'BK-2401',
-    customer: { name: 'Amara Johnson', image: 'https://i.pravatar.cc/150?u=1' },
-    stylist: { name: 'Kezia Okafor', image: 'https://i.pravatar.cc/150?u=2' },
-    service: 'Knotless Box Braids',
-    date: 'Dec 23, 2024',
-    time: '10:00 AM',
-    amount: '$180',
-    status: 'Confirmed',
-    escrow: 'Held'
-  },
-  {
-    id: 'BK-2402',
-    customer: { name: 'Nkechi Obi', image: 'https://i.pravatar.cc/150?u=3' },
-    stylist: { name: 'Yewande Bello', image: 'https://i.pravatar.cc/150?u=4' },
-    service: 'Goddess Locs',
-    date: 'Dec 23, 2024',
-    time: '2:00 PM',
-    amount: '$220',
-    status: 'Active',
-    escrow: 'Held'
-  },
-  {
-    id: 'BK-2403',
-    customer: { name: 'Fatima Al-Hassan', image: 'https://i.pravatar.cc/150?u=5' },
-    stylist: { name: 'Amina Diallo', image: 'https://i.pravatar.cc/150?u=6' },
-    service: 'TWA Styling',
-    date: 'Dec 22, 2024',
-    time: '11:00 AM',
-    amount: '$85',
-    status: 'Completed',
-    escrow: 'Released'
-  },
-  {
-    id: 'BK-2404',
-    customer: { name: 'Zara Williams', image: 'https://i.pravatar.cc/150?u=7' },
-    stylist: { name: 'Chidinma Eze', image: 'https://i.pravatar.cc/150?u=8' },
-    service: 'Sisterlocks Install',
-    date: 'Dec 22, 2024',
-    time: '9:00 AM',
-    amount: '$350',
-    status: 'Completed',
-    escrow: 'Released'
-  },
-  {
-    id: 'BK-2405',
-    customer: { name: 'Yetunde Adeyemi', image: 'https://i.pravatar.cc/150?u=9' },
-    stylist: { name: 'Temi Fashola', image: 'https://i.pravatar.cc/150?u=10' },
-    service: 'Sisterlocks Install',
-    date: 'Dec 24, 2024',
-    time: '3:00 PM',
-    amount: '$160',
-    status: 'Pending',
-    escrow: 'Pending'
-  },
-  {
-    id: 'BK-2406',
-    customer: { name: 'Chiamaka Eze', image: 'https://i.pravatar.cc/150?u=11' },
-    stylist: { name: 'Kezia Okafor', image: 'https://i.pravatar.cc/150?u=2' },
-    service: 'Kinky Twists',
-    date: 'Dec 21, 2024',
-    time: '1:00 PM',
-    amount: '$140',
-    status: 'Cancelled',
-    escrow: 'Refunded'
-  },
-  {
-    id: 'BK-2407',
-    customer: { name: 'Blessing Mensah', image: 'https://i.pravatar.cc/150?u=12' },
-    stylist: { name: 'Funke Odeyemi', image: 'https://i.pravatar.cc/150?u=13' },
-    service: 'Feed-In Braids',
-    date: 'Dec 25, 2024',
-    time: '11:00 AM',
-    amount: '$75',
-    status: 'Pending',
-    escrow: 'Pending'
-  },
-  {
-    id: 'BK-2408',
-    customer: { name: 'Adaeze Nwosu', image: 'https://i.pravatar.cc/150?u=14' },
-    stylist: { name: 'Amina Diallo', image: 'https://i.pravatar.cc/150?u=6' },
-    service: 'Cornrows',
-    date: 'Dec 20, 2024',
-    time: '4:00 PM',
-    amount: '$120',
-    status: 'Completed',
-    escrow: 'Released'
-  }
+import { useState } from "react";
+import { Download, Eye, Filter, RefreshCw } from "lucide-react";
+import Headers from "@/components/admin/common/Headers";
+import { DataTable, Pagination, PersonCell, SearchBox, StatusPill, TabBar, errorText, PAGE_SIZE } from "@/components/admin/common/kit";
+import { Notice } from "@/components/admin/common/Modal";
+import { BookingDetailsModal } from "@/components/admin/bookings/BookingDetailsModal";
+import { formatDate, formatNaira, formatSlot, titleCase } from "@/lib/admin/format";
+import { listPath, useBookings } from "@/lib/admin/resources";
+import { useDebounced } from "@/lib/admin/use-debounced";
+import { apiClient } from "@/lib/api-client";
+
+const TABS = [
+  { key: "", label: "All" }, { key: "PENDING", label: "Pending" }, { key: "CONFIRMED", label: "Confirmed" },
+  { key: "IN_PROGRESS", label: "Active" }, { key: "COMPLETED", label: "Completed" }, { key: "CANCELLED", label: "Cancelled" },
+];
+const SUMMARY = [
+  { key: "total", label: "Total", color: "#4D145D" }, { key: "PENDING", label: "Pending", color: "#D97706" }, { key: "CONFIRMED", label: "Confirmed", color: "#2563EB" },
+  { key: "IN_PROGRESS", label: "Active", color: "#7C3AED" }, { key: "COMPLETED", label: "Completed", color: "#059669" }, { key: "CANCELLED", label: "Cancelled", color: "#DC2626" },
+];
+const COLUMNS = [
+  { key: "id", label: "Booking ID" }, { key: "customer", label: "Customer" }, { key: "stylist", label: "Stylist" }, { key: "service", label: "Service" },
+  { key: "when", label: "Date & Time" }, { key: "amount", label: "Amount" }, { key: "status", label: "Status" }, { key: "escrow", label: "Escrow" }, { key: "actions", label: "Actions", className: "text-center" },
 ];
 
 export default function BookingsPage() {
-  const [activeTab, setActiveTab] = useState('All');
-  const [viewBooking, setViewBooking] = useState<typeof BOOKINGS_DATA[0] | null>(null);
+  const [status, setStatus] = useState("");
+  const [escrow, setEscrow] = useState("");
+  const [showFilter, setShowFilter] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const debounced = useDebounced(search);
+  const params = { page, limit: PAGE_SIZE, status: status || undefined, escrowState: escrow || undefined, search: debounced.trim() || undefined, sortBy: "createdAt", sortOrder: "desc" };
+  const query = useBookings(params);
+  const meta = query.data?.meta;
+  const rows = query.data?.rows ?? [];
+  const counts = meta?.counts ?? {};
+  const total = meta?.stats?.total ?? Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+  async function exportCsv() {
+    try { await apiClient.admin.download(listPath("bookings", { ...params, page: undefined, limit: 100 }, "csv"), "bookings-overview.csv"); }
+    catch (cause) { setNotice({ kind: "error", text: errorText(cause) ?? "The export failed." }); }
+  }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-1 md:p-8 overflow-y-auto">
-      
-      {/* Page Header */}
-      <div className="flex items-center justify-between flex-wrap shrink-0 mb-6">
-        <div>
-          <h1 className="text-[28px] font-bold text-[#1E1E1E]">Bookings Overview</h1>
-          <p className="text-[14px] text-gray-500 mt-1">Monitor all hair service bookings and their status</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="cursor-pointer flex items-center gap-2 bg-[#F3F4F6] border border-gray-200 px-4 py-[10px] rounded-[8px] text-gray-600 text-[14px] font-medium hover:bg-gray-200 transition-colors">
-            <Download className="w-4 h-4" />
-            Export Report
-          </button>
-          <button className="cursor-pointer flex items-center gap-2 bg-[#D95C30] text-white px-4 py-[10px] rounded-[8px] text-[14px] font-medium hover:bg-[#C24D25] transition-colors">
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-6 gap-4 mb-6 shrink-0">
-        <div className="bg-[#F0F1F3] rounded-[16px] h-[94px] border border-[#F3F4F6] flex flex-col justify-center items-center shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] gap-0.5">
-          <p className="text-[26px] font-[800] text-[#4D145D] leading-[1.5]">1,247</p>
-          <p className="text-[12px] text-[#6A7282] font-normal">Total</p>
-        </div>
-        <div className="bg-[#F0F1F3] rounded-[16px] h-[94px] border border-[#F3F4F6] flex flex-col justify-center items-center shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] gap-0.5">
-          <p className="text-[26px] font-[800] text-[#F59E0B] leading-[1.5]">89</p>
-          <p className="text-[12px] text-[#6A7282] font-normal">Pending</p>
-        </div>
-        <div className="bg-[#F0F1F3] rounded-[16px] h-[94px] border border-[#F3F4F6] flex flex-col justify-center items-center shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] gap-0.5">
-          <p className="text-[26px] font-[800] text-[#3B82F6] leading-[1.5]">234</p>
-          <p className="text-[12px] text-[#6A7282] font-normal">Confirmed</p>
-        </div>
-        <div className="bg-[#F0F1F3] rounded-[16px] h-[94px] border border-[#F3F4F6] flex flex-col justify-center items-center shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] gap-0.5">
-          <p className="text-[26px] font-[800] text-[#7B2796] leading-[1.5]">156</p>
-          <p className="text-[12px] text-[#6A7282] font-normal">Active</p>
-        </div>
-        <div className="bg-[#F0F1F3] rounded-[16px] h-[94px] border border-[#F3F4F6] flex flex-col justify-center items-center shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] gap-0.5">
-          <p className="text-[26px] font-[800] text-[#10B981] leading-[1.5]">698</p>
-          <p className="text-[12px] text-[#6A7282] font-normal">Completed</p>
-        </div>
-        <div className="bg-[#F0F1F3] rounded-[16px] h-[94px] border border-[#F3F4F6] flex flex-col justify-center items-center shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] gap-0.5">
-          <p className="text-[26px] font-[800] text-[#EF4444] leading-[1.5]">70</p>
-          <p className="text-[12px] text-[#6A7282] font-normal">Cancelled</p>
-        </div>
-      </div>
-
-      {/* Tabs & Search */}
-      <div className="flex items-center justify-between flex-wrap mb-6">
-        <div className="flex items-center flex-wrap gap-[6px] bg-white border border-[#F3F4F6] rounded-[10px] p-[6px] pl-[8px] shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] h-[46px]">
-          {['All', 'Pending', 'Confirmed', 'Active', 'Completed', 'Cancelled'].map((tab) => {
-            const counts = { 'All': 8, 'Pending': 2, 'Confirmed': 1, 'Active': 1, 'Completed': 3, 'Cancelled': 1 };
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`cursor-pointer flex items-center gap-2 px-3 h-[32px] rounded-[8px] text-[13px] font-medium transition-colors ${
-                  isActive ? 'bg-[#4D145D] text-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)]' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                {tab}
-                <span className={`px-1.5 h-5 min-w-[20px] flex items-center justify-center rounded-full text-[11px] font-semibold ${isActive ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>
-                  {counts[tab as keyof typeof counts]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex items-center flex-wrap gap-3">
-          <div className="flex items-center gap-[6px] h-[40px] bg-white border border-gray-200 rounded-lg px-[12px] w-[260px]">
-            <Search className="w-[16px] h-[16px] text-gray-400 shrink-0" />
-            <input 
-              type="text" 
-              placeholder="Search bookings..." 
-              className="bg-transparent border-none outline-none text-[13px] font-normal text-[#1E1E1E] placeholder:text-gray-400 w-full"
-            />
+    <div className="flex min-h-[calc(100vh-80px)] flex-col bg-white p-1 md:p-8">
+      <Headers title="Bookings Overview" description="Monitor all hair service bookings and their status" buttonOneIcon={<Download className="h-4 w-4" />} buttonOneText="Export Report" buttonOneAction={() => void exportCsv()} buttonTwoIcon={<RefreshCw className="h-4 w-4" />} buttonTwoText="Refresh" buttonTwoAction={() => void query.refetch()} buttonTwoDisabled={query.isFetching} />
+      <Notice notice={notice} onDismiss={() => setNotice(null)} />
+      <section aria-label="Booking totals" className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        {SUMMARY.map((item) => (
+          <div key={item.key} className="rounded-[12px] bg-[#F0F1F3] px-4 py-5 text-center shadow-sm">
+            {query.isLoading ? <div className="mx-auto h-7 w-12 animate-pulse rounded bg-gray-200" /> : <p className="text-[26px] font-bold leading-none" style={{ color: item.color }}>{(item.key === "total" ? total : counts[item.key] ?? 0).toLocaleString("en-NG")}</p>}
+            <p className="mt-2 text-[12px] text-gray-500">{item.label}</p>
           </div>
-          <button className="cursor-pointer flex items-center justify-center gap-2 px-4 h-[40px] border border-gray-200 rounded-lg bg-white text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-            <Filter className="w-4 h-4" />
-            Filter
-          </button>
+        ))}
+      </section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <TabBar label="Booking status" active={status} onChange={(key) => { setStatus(key); setPage(1); }} tabs={TABS.map((tab) => ({ ...tab, count: tab.key ? counts[tab.key] ?? 0 : total }))} />
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchBox label="Search bookings" placeholder="Search bookings..." value={search} onChange={(value) => { setSearch(value); setPage(1); }} />
+          <button type="button" aria-expanded={showFilter} onClick={() => setShowFilter((open) => !open)} className="flex h-[40px] cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-[13px] font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"><Filter className="h-4 w-4" />Filter{escrow ? " (1)" : ""}</button>
         </div>
       </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <div className="border border-[#E4E6E7] rounded-[8px]">
-          <table className="w-full text-left border-collapse bg-[#FFFFF7]">
-            <thead>
-              <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">
-                <th className="px-6 py-4">BOOKING ID</th>
-                <th className="px-4 py-4">CUSTOMER</th>
-                <th className="px-4 py-4">STYLIST</th>
-                <th className="px-4 py-4 text-center">SERVICE</th>
-                <th className="px-4 py-4 text-center">DATE & TIME</th>
-                <th className="px-4 py-4 text-center">AMOUNT</th>
-                <th className="px-4 py-4 text-center">STATUS</th>
-                <th className="px-4 py-4 text-center">ESCROW</th>
-                <th className="px-6 py-4 text-center">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {BOOKINGS_DATA.filter((booking) => activeTab === 'All' || booking.status === activeTab).map((booking) => (
-                <tr key={booking.id} className="hover:bg-gray-50 transition-colors border-b border-[#E4E6E7] last:border-b-0">
-                  <td className="px-6 py-4 border-r border-[#E4E6E7]">
-                    <span className="text-[12px] font-medium text-gray-500">{booking.id}</span>
-                  </td>
-                  <td className="px-4 py-4 border-r border-[#E4E6E7]">
-                    <div className="flex items-center gap-2">
-                      <div className="w-[28px] h-[28px] rounded-full overflow-hidden shrink-0 border border-gray-200">
-                        <Image src={booking.customer.image} alt={booking.customer.name} width={28} height={28} className="object-cover w-full h-full" />
-                      </div>
-                      <span className="text-[13px] font-bold text-gray-900">{booking.customer.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 border-r border-[#E4E6E7]">
-                    <div className="flex items-center gap-2">
-                      <div className="w-[28px] h-[28px] rounded-full overflow-hidden shrink-0 border border-gray-200">
-                        <Image src={booking.stylist.image} alt={booking.stylist.name} width={28} height={28} className="object-cover w-full h-full" />
-                      </div>
-                      <span className="text-[13px] font-bold text-gray-900">{booking.stylist.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-center border-r border-[#E4E6E7]">
-                    <span className="text-[13px] font-bold text-gray-900">{booking.service}</span>
-                  </td>
-                  <td className="px-4 py-4 text-center border-r border-[#E4E6E7]">
-                    <div className="flex flex-col items-center">
-                      <span className="text-[12px] font-bold text-gray-600">{booking.date}</span>
-                      <span className="text-[11px] text-gray-400 mt-0.5">{booking.time}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-center border-r border-[#E4E6E7]">
-                    <span className="text-[13px] font-bold text-gray-900">{booking.amount}</span>
-                  </td>
-                  <td className="px-4 py-4 text-center border-r border-[#E4E6E7]">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-[11px] font-bold ${
-                      booking.status === 'Confirmed' ? 'bg-[#EFF6FF] text-[#3B82F6] border border-[#DBEAFE]' :
-                      booking.status === 'Active' ? 'bg-[#F0FDF4] text-[#10B981] border border-[#BBF7D0]' :
-                      booking.status === 'Completed' ? 'bg-[#F0FDF4] text-[#10B981] border border-[#BBF7D0]' :
-                      booking.status === 'Pending' ? 'bg-[#FFF7ED] text-[#F59E0B] border border-[#FFEDD5]' :
-                      'bg-[#FEF2F2] text-[#EF4444] border border-[#FECACA]'
-                    }`}>
-                      {booking.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-center border-r border-[#E4E6E7]">
-                    <span className={`inline-flex px-3 py-1 rounded-full text-[11px] font-bold ${
-                      booking.escrow === 'Held' ? 'bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A]' :
-                      booking.escrow === 'Released' ? 'bg-[#F0FDF4] text-[#10B981] border border-[#BBF7D0]' :
-                      booking.escrow === 'Pending' ? 'bg-[#FFF7ED] text-[#F59E0B] border border-[#FFEDD5]' :
-                      'bg-[#FAF5FF] text-[#A855F7] border border-[#E9D5FF]'
-                    }`}>
-                      {booking.escrow}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button 
-                      className="cursor-pointer text-[#60A5FA] hover:text-[#3B82F6] transition-colors"
-                      onClick={() => setViewBooking(booking)}
-                    >
-                      <Eye className="w-[18px] h-[18px]" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {showFilter ? (
+        <div className="mb-4 flex flex-wrap items-end gap-4 rounded-[10px] border border-gray-200 bg-gray-50 p-4">
+          <label className="text-[13px] font-medium text-gray-700">Escrow state
+            <select value={escrow} onChange={(event) => { setEscrow(event.target.value); setPage(1); }} className="mt-1.5 block h-[40px] w-48 rounded-lg border border-gray-200 bg-white px-3 text-[14px] focus-visible:ring-2 focus-visible:ring-[#4D145D]">
+              <option value="">Any</option>{["UNPAID", "HELD", "LOCKED", "RELEASED", "REFUNDED"].map((state) => <option key={state} value={state}>{titleCase(state)}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={() => { setEscrow(""); setPage(1); }} className="h-[40px] cursor-pointer px-2 text-[13px] font-medium text-[#4D145D] hover:underline">Clear filters</button>
         </div>
-      </div>
-
-      {/* Pagination Footer */}
-      <div className="flex items-center justify-between mt-6 shrink-0">
-        <p className="text-[13px] text-gray-400 font-medium">Showing 8 results</p>
-        <div className="flex items-center gap-1">
-          <button className="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full bg-[#4D145D] text-white text-[13px] font-bold">1</button>
-          <button className="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-[13px] font-medium transition-colors">2</button>
-          <button className="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-[13px] font-medium transition-colors">3</button>
-          <span className="w-8 h-8 flex items-center justify-center text-gray-400 text-[13px]">...</span>
-          <button className="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-[13px] font-medium transition-colors">10</button>
-        </div>
-      </div>
-
-      {/* Booking Details Modal */}
-      {viewBooking && (
-        <BookingDetailsModal
-          booking={viewBooking}
-          onClose={() => setViewBooking(null)}
-        />
-      )}
+      ) : null}
+      <DataTable columns={COLUMNS} loading={query.isLoading} error={errorText(query.error)} empty={rows.length === 0} onRetry={() => void query.refetch()}>
+        {rows.map((booking) => (
+          <tr key={booking.id} className="hover:bg-[#F8F6FA]">
+            <td className="px-4 py-3 text-[12px] text-gray-500">{booking.bookingNumber}</td>
+            <td className="px-4 py-3"><PersonCell name={booking.customer.name} avatar={booking.customer.avatar} /></td>
+            <td className="px-4 py-3"><PersonCell name={booking.stylist.name} avatar={booking.stylist.avatar} /></td>
+            <td className="px-4 py-3 text-center text-[13px] font-medium text-[#1E1E1E]">{booking.services.map((s) => s.name).join(", ") || "—"}</td>
+            <td className="px-4 py-3 text-center"><p className="text-[12px] font-medium text-gray-800">{formatDate(booking.bookingDate)}</p><p className="text-[11px] text-gray-400">{formatSlot(booking.timeSlot)}</p></td>
+            <td className="px-4 py-3 text-center text-[13px] font-bold text-[#1E1E1E]">{formatNaira(booking.totalAmount)}</td>
+            <td className="px-4 py-3 text-center"><StatusPill status={booking.status} label={booking.status === "IN_PROGRESS" ? "Active" : undefined} /></td>
+            <td className="px-4 py-3 text-center"><StatusPill status={booking.escrow.state} /></td>
+            <td className="px-4 py-3 text-center"><button type="button" aria-label={`View booking ${booking.bookingNumber}`} onClick={() => setSelected(booking.id)} className="cursor-pointer rounded-md p-1.5 text-[#3B82F6] hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"><Eye className="h-4 w-4" /></button></td>
+          </tr>
+        ))}
+      </DataTable>
+      <Pagination page={meta?.page ?? page} totalPages={meta?.totalPages ?? 1} total={meta?.total ?? 0} shown={rows.length} onPage={setPage} noun="bookings" />
+      <BookingDetailsModal bookingId={selected} onClose={() => setSelected(null)} onNotice={(kind, text) => setNotice({ kind, text })} />
     </div>
   );
 }

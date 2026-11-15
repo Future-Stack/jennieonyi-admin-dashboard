@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // CommonJS postinstall helper, runs under plain node.
+    "scripts/**",
   ]),
 ]);
 

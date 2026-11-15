@@ -8,18 +8,22 @@ export default function Headers({
     buttonOneIcon= <Download className="w-4 h-4" />,
     buttonOneText= "Export",
     buttonOneAction,
+    buttonOneDisabled = false,
     buttonTwoIcon= <RefreshCw className="w-4 h-4" />,
     buttonTwoText= "Refresh",
-    buttonTwoAction
+    buttonTwoAction,
+    buttonTwoDisabled = false,
 }: {
     title: string,
     description: string,
     buttonOneIcon: React.ReactNode,
     buttonOneText: string,
     buttonOneAction: () => void,
+    buttonOneDisabled?: boolean,
     buttonTwoIcon: React.ReactNode,
     buttonTwoText: string,
     buttonTwoAction: () => void,
+    buttonTwoDisabled?: boolean,
 }) {
     return (
         <div className="flex flex-col gap-3 md:flex-row items-start md:items-center justify-between shrink-0 mb-6">
@@ -28,11 +32,21 @@ export default function Headers({
           <p className="text-[14px] text-gray-500 mt-1">{description}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={buttonOneAction} className="cursor-pointer flex items-center gap-2 bg-[#F3F4F6] border border-gray-200 px-4 py-[10px] rounded-[6px] text-gray-600 text-[14px] font-medium hover:bg-gray-200 transition-colors">
+          <button
+            disabled={buttonOneDisabled}
+            onClick={buttonOneAction}
+            type="button"
+            className="flex items-center gap-2 rounded-[6px] border border-gray-200 bg-[#F3F4F6] px-4 py-[10px] text-[14px] font-medium text-gray-600 transition-colors hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
             {buttonOneIcon}
             {buttonOneText}
           </button>
-          <button onClick={buttonTwoAction} className="cursor-pointer flex items-center gap-[6px] bg-[#D95C30] border border-[#D95C30] px-4 py-[10px] rounded-[6px] text-white text-[14px] font-medium hover:bg-[#C24D25] transition-colors">
+          <button
+            disabled={buttonTwoDisabled}
+            onClick={buttonTwoAction}
+            type="button"
+            className="flex items-center gap-[6px] rounded-[6px] border border-[#D95C30] bg-[#D95C30] px-4 py-[10px] text-[14px] font-medium text-white transition-colors hover:bg-[#C24D25] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
             {buttonTwoIcon}
             {buttonTwoText}
           </button>

@@ -1,408 +1,602 @@
 "use client";
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { Search, Filter, ChevronDown, Download, Eye, Trash2, Shield, MapPin, Check } from 'lucide-react';
 
-const USERS_DATA = [
-  {
-    id: 1,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'New York, NY',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Active',
-  },
-  {
-    id: 2,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'Atlanta, GA',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Active',
-  },
-  {
-    id: 3,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'Houston, TX',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Active',
-  },
-  {
-    id: 4,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'Chicago, IL',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Active',
-  },
-  {
-    id: 5,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'Washington, DC',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Pending',
-  },
-  {
-    id: 6,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'Los Angeles, CA',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Suspended',
-  },
-  {
-    id: 7,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1589156280159-27698a70f29e?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'Dallas, TX',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Active',
-  },
-  {
-    id: 8,
-    name: 'Amara Johnson',
-    customerId: 'C001',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-    email: 'amara.j@email.com',
-    phone: '+1 555-0142',
-    location: 'Miami, FL',
-    joined: 'Jan 12, 2024',
-    bookings: 14,
-    revenue: '$842.50',
-    status: 'Active',
-  },
-];
+import { ReasonDialog } from "@/components/admin/common/Modal";
+import React, { useMemo, useState } from "react";
+import Image from "next/image";
+import {
+  Check,
+  ChevronDown,
+  Download,
+  Eye,
+  MapPin,
+  Search,
+  Shield,
+  UserRound,
+  X,
+} from "lucide-react";
+import { ApiError } from "@/lib/api/errors";
+import { apiClient } from "@/lib/api-client";
+import { formatNaira } from "@/lib/admin/dashboard";
+import {
+  buildPeopleListPath,
+  useAccountAction,
+  useCustomerDetail,
+  useCustomers,
+  useFlagAdminUser,
+  useUpdateAdminUser,
+  type Customer,
+} from "@/lib/admin/people";
+
+const PAGE_SIZE = 10;
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Africa/Lagos",
+  }).format(date);
+}
+
+function formatStatus(status: Customer["status"]): string {
+  switch (status) {
+    case "ACTIVE":
+      return "Active";
+    case "PENDING_APPROVAL":
+      return "Pending";
+    case "SUSPEND":
+      return "Suspended";
+    case "REJECTED":
+      return "Rejected";
+    case "INACTIVE":
+      return "Inactive";
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof ApiError
+    ? error.message
+    : "The request could not be completed. Please try again.";
+}
 
 export default function UsersPage() {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [viewUser, setViewUser] = useState<typeof USERS_DATA[0] | null>(null);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [viewUserId, setViewUserId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState({ name: "", email: "", phone: "", location: "" });
+  const [flagReason, setFlagReason] = useState("");
+  const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === USERS_DATA.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(USERS_DATA.map(u => u.id));
+  const filters = useMemo(
+    () => ({
+      page,
+      limit: PAGE_SIZE,
+      search,
+      ...(status ? { status } : {}),
+      ...(flaggedOnly ? { isFlagged: true } : {}),
+    }),
+    [page, search, status, flaggedOnly],
+  );
+  const customersQuery = useCustomers(filters);
+  const detailQuery = useCustomerDetail(viewUserId);
+  const updateUser = useUpdateAdminUser();
+  const flagUser = useFlagAdminUser();
+  const accountAction = useAccountAction();
+  const customer = detailQuery.data;
+  const openCustomer = (user: Customer, flagImmediately = false) => {
+    setViewUserId(user.userId);
+    setActionError(null);
+    setIsEditing(false);
+    setDraft({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      location: user.location ?? "",
+    });
+    setIsFlagDialogOpen(flagImmediately);
+  };
+
+  const customers = customersQuery.data?.data ?? [];
+  const meta = customersQuery.data?.meta;
+  const totalPages = meta?.totalPages ?? 0;
+  const isMutating =
+    updateUser.isPending || flagUser.isPending || accountAction.isPending;
+
+  const exportCustomers = async () => {
+    setExportError(null);
+    try {
+      await apiClient.admin.download(
+        buildPeopleListPath("customers", filters, "csv"),
+        `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+    } catch (error) {
+      setExportError(getErrorMessage(error));
     }
   };
 
-  const toggleSelect = (id: number) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
+  const saveCustomer = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!customer) return;
+    setActionError(null);
+    try {
+      await updateUser.mutateAsync({
+        userId: customer.userId,
+        name: draft.name.trim(),
+        email: draft.email.trim(),
+        phone: draft.phone.trim(),
+        location: draft.location.trim(),
+      });
+      setIsEditing(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error));
     }
   };
+
+  const submitFlag = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!customer || flagReason.trim().length < 5) return;
+    setActionError(null);
+    try {
+      await flagUser.mutateAsync({
+        userId: customer.userId,
+        isFlagged: !customer.isFlagged,
+        reason: flagReason.trim(),
+      });
+      setIsFlagDialogOpen(false);
+      setFlagReason("");
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+    }
+  };
+
+  const [statusDialog, setStatusDialog] = useState<"suspend" | "reinstate" | null>(null);
+
+  const requestStatusChange = () => {
+    if (!customer) return;
+    setStatusDialog(customer.status === "SUSPEND" ? "reinstate" : "suspend");
+  };
+
+  const changeAccountStatus = async (reason: string) => {
+    if (!customer || !statusDialog) return;
+    setActionError(null);
+    try {
+      await accountAction.mutateAsync({
+        userId: customer.userId,
+        action: statusDialog,
+        ...(reason ? { reason } : {}),
+      });
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+    } finally {
+      setStatusDialog(null);
+    }
+  };
+
+  const showError = actionError ??
+    (updateUser.error ? getErrorMessage(updateUser.error) : null) ??
+    (flagUser.error ? getErrorMessage(flagUser.error) : null) ??
+    (accountAction.error ? getErrorMessage(accountAction.error) : null);
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-white p-1 md:p-8 overflow-y-auto">
-      
-      {/* Page Header */}
-      <div className="flex items-center justify-between flex-wrap shrink-0 mb-8">
+    <div className="flex min-h-[calc(100vh-80px)] flex-col overflow-y-auto bg-white p-1 md:p-8">
+      <div className="mb-8 flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-bold text-[#1E1E1E]">User Management</h1>
-          <p className="text-[14px] text-gray-500 mt-1">Manage all platform users, stylists, and agents</p>
+          <p className="mt-1 text-[14px] text-gray-500">Manage platform customers and their accounts</p>
         </div>
-        <button className="flex items-center gap-2 bg-[#F3F4F6] border border-gray-200 px-4 py-2 rounded-lg text-gray-600 text-[14px] font-medium hover:bg-gray-200 transition-colors">
-          <Download className="w-4 h-4" />
+        <button
+          type="button"
+          onClick={() => void exportCustomers()}
+          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-[#F3F4F6] px-4 py-2 text-[14px] font-medium text-gray-600 transition-colors hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+        >
+          <Download className="h-4 w-4" />
           Export CSV
         </button>
       </div>
 
-      {/* Top Controls */}
-      <div className="flex items-center justify-between flex-wrap gap-3 md:gap-0 shrink-0 mb-6">
-        <div className="flex items-center">
-          <div className="flex items-center justify-center bg-white border border-[#F3F4F6] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.05)] w-[310px] h-[46px]">
-            <button className="bg-[#4D145D] text-white w-[294px] h-[32px] rounded-[8px] text-[13px] font-medium flex items-center justify-center gap-[6px]">
-              Customers <span className="bg-white/20 px-1.5 py-0.5 rounded-[4px] text-[11px]">24851</span>
-            </button>
-          </div>
+      {exportError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+          {exportError}
         </div>
-        <div className="flex items-center flex-wrap gap-3">
-          <div className="flex items-center gap-[6px] h-[40px] bg-white border border-gray-200 rounded-lg px-[12px] w-[260px]">
-            <Search className="w-[16px] h-[16px] text-gray-400 shrink-0" />
-            <input 
-              type="text" 
-              placeholder="Search customers..." 
-              className="bg-transparent border-none outline-none text-[13px] font-normal text-[#1E1E1E] placeholder:text-gray-400 w-full"
+      )}
+
+      <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex h-[46px] items-center rounded-[10px] border border-[#F3F4F6] bg-white p-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+          <span aria-label="Customer total" className="flex h-[32px] items-center justify-center gap-2 rounded-[8px] bg-[#4D145D] px-4 text-[13px] font-medium text-white">
+            Customers
+            <span className="rounded-[4px] bg-white/20 px-1.5 py-0.5 text-[11px]">
+              {meta?.stats?.total ?? meta?.total ?? "—"}
+            </span>
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex h-[40px] w-[260px] items-center gap-[6px] rounded-lg border border-gray-200 bg-white px-[12px] focus-within:ring-2 focus-within:ring-[#4D145D]">
+            <Search className="h-4 w-4 shrink-0 text-gray-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search customers..."
+              aria-label="Search customers"
+              className="w-full border-none bg-transparent text-[13px] text-[#1E1E1E] outline-none placeholder:text-gray-400"
             />
-          </div>
-          <button className="flex items-center justify-center gap-2 px-5 h-[40px] border border-gray-200 rounded-lg bg-white text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-            <Filter className="w-4 h-4" />
-            Filter
+          </label>
+          <button
+            type="button"
+            aria-pressed={flaggedOnly}
+            onClick={() => {
+              setFlaggedOnly((value) => !value);
+              setPage(1);
+            }}
+            className={`flex h-[40px] items-center justify-center gap-2 rounded-lg border px-5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D] ${
+              flaggedOnly
+                ? "border-[#4D145D] bg-[#F3F0FF] text-[#4D145D]"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Shield className="h-4 w-4" />
+            {flaggedOnly ? "Flagged only" : "Filter"}
           </button>
           <div className="relative">
-            <select className="appearance-none bg-white border border-gray-200 rounded-lg px-5 py-2 pl-4 pr-10 text-[13px] font-medium text-gray-600 focus:outline-none h-[40px] cursor-pointer">
-              <option>All Status</option>
-              <option>Active</option>
-              <option>Pending</option>
-              <option>Suspended</option>
+            <select
+              id="customer-status"
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter customers by status"
+              className="h-[40px] cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-4 pr-10 text-[13px] font-medium text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+            >
+              <option value="">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="PENDING_APPROVAL">Pending</option>
+              <option value="SUSPEND">Suspended</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="INACTIVE">Inactive</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           </div>
         </div>
       </div>
 
-      {/* Table Container */}
+      {customersQuery.isError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+          <p>{getErrorMessage(customersQuery.error)}</p>
+          <button
+            type="button"
+            onClick={() => void customersQuery.refetch()}
+            className="mt-2 font-semibold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
-        <div className="border border-[#EEF2FF] rounded-[12px] ">
-          <table className="w-full text-left border-collapse min-w-[1000px] bg-white">
+        <div className="rounded-[12px] border border-[#EEF2FF]">
+          <table className="w-full min-w-[1000px] border-collapse bg-white text-left">
             <thead>
-              <tr className="bg-[#4D145D] text-white text-[11px] font-bold uppercase tracking-wider">
-                {/* <th className="py-4 px-4 w-[61px] text-center">
-                  <div 
-                    onClick={toggleSelectAll}
-                    className={`w-4 h-4 mx-auto rounded-[4px] border flex items-center justify-center cursor-pointer transition-colors ${
-                      selectedIds.length === USERS_DATA.length 
-                        ? 'bg-[#F27A54] border-[#F27A54]' 
-                        : 'border-[#F27A54] bg-white'
-                    }`}
-                  >
-                    {selectedIds.length === USERS_DATA.length && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                  </div>
-                </th> */}
-                <th className="px-4 py-4 text-left font-bold">Customer</th>
-                <th className="px-4 py-4 text-left font-bold">Contact</th>
-                <th className="px-4 py-4 text-left font-bold">Location</th>
-                <th className="px-4 py-4 text-center font-bold">Joined</th>
-                <th className="px-4 py-4 text-center font-bold">Bookings</th>
-                <th className="px-4 py-4 text-center font-bold">Spent</th>
-                <th className="px-4 py-4 text-center font-bold">Status</th>
-                <th className="px-4 py-4 text-center font-bold w-[179px]">Action</th>
+              <tr className="bg-[#4D145D] text-[11px] font-bold uppercase tracking-wider text-white">
+                <th className="px-4 py-4 text-left">Customer</th>
+                <th className="px-4 py-4 text-left">Contact</th>
+                <th className="px-4 py-4 text-center">Location</th>
+                <th className="px-4 py-4 text-center">Joined</th>
+                <th className="px-4 py-4 text-center">Bookings</th>
+                <th className="px-4 py-4 text-center">Spent</th>
+                <th className="px-4 py-4 text-center">Status</th>
+                <th className="w-[120px] px-4 py-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="bg-[#FFFFF7]">
-            {USERS_DATA.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50 transition-colors group">
-                {/* <td className="py-3 px-4 text-center border-r border-b border-[#EEF2FF]">
-                  <div 
-                    onClick={() => toggleSelect(user.id)}
-                    className={`w-4 h-4 mx-auto rounded-[4px] border flex items-center justify-center cursor-pointer transition-colors ${
-                      selectedIds.includes(user.id)
-                        ? 'bg-[#F27A54] border-[#F27A54]'
-                        : 'border-[#F27A54] bg-white'
-                    }`}
-                  >
-                    {selectedIds.includes(user.id) && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                  </div>
-                </td> */}
-                <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
-                  <div className="flex items-center gap-3">
-                    <Image src={user.avatar} alt={user.name} width={36} height={36} className="w-[36px] h-[36px] rounded-full object-cover shrink-0" />
-                    <div>
-                      <div className="text-[13px] font-bold text-gray-900">{user.name}</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">{user.customerId}</div>
+              {customersQuery.isLoading &&
+                Array.from({ length: 6 }, (_, index) => (
+                  <tr key={`skeleton-${index}`} aria-hidden="true">
+                    {Array.from({ length: 8 }, (_, cell) => (
+                      <td key={cell} className="border-b border-r border-[#EEF2FF] px-4 py-5">
+                        <div className="h-4 animate-pulse rounded bg-gray-200" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              {!customersQuery.isLoading && customers.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-6 py-14 text-center">
+                    <UserRound className="mx-auto mb-3 h-8 w-8 text-gray-400" aria-hidden="true" />
+                    <p className="font-semibold text-gray-800">No customers found</p>
+                    <p className="mt-1 text-sm text-gray-500">Try changing the search or filters.</p>
+                  </td>
+                </tr>
+              )}
+              {customers.map((user) => (
+                <tr key={user.userId} className="group transition-colors hover:bg-gray-50">
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      {user.avatar ? (
+                        <Image
+                          src={user.avatar}
+                          alt=""
+                          width={36}
+                          height={36}
+                          className="h-9 w-9 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F3F0FF] text-xs font-bold text-[#4D145D]" aria-hidden="true">
+                          {user.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-[13px] font-bold text-gray-900">{user.name}</div>
+                        <div className="mt-0.5 text-[11px] text-gray-400">{user.userId.slice(0, 8)}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
-                  <div className="text-[13px] text-gray-900 font-medium">{user.email}</div>
-                  <div className="text-[12px] text-gray-400 mt-0.5">{user.phone}</div>
-                </td>
-                <td className="py-3 px-4 text-center text-[13px] text-gray-600 border-r border-b border-[#EEF2FF]">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {user.location}
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-center text-[13px] text-gray-600 border-r border-b border-[#EEF2FF]">
-                  {user.joined}
-                </td>
-                <td className="py-3 px-4 text-center text-[13px] font-bold text-gray-900 border-r border-b border-[#EEF2FF]">
-                  {user.bookings}
-                </td>
-                <td className="py-3 px-4 text-center text-[13px] font-bold text-gray-900 border-r border-b border-[#EEF2FF]">
-                  {user.revenue}
-                </td>
-                <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
-                  <div className="flex items-center justify-center">
-                    <span className={`px-2 py-[2px] rounded-full text-[12px] font-medium ${
-                      user.status === 'Active' ? 'bg-[#3BB515] text-white' :
-                      user.status === 'Pending' ? 'bg-[#D95C30] text-white' :
-                      'bg-[#FF332C] text-white'
-                    }`}>
-                      {user.status}
+                  </td>
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3">
+                    <div className="text-[13px] font-medium text-gray-900">{user.email}</div>
+                    <div className="mt-0.5 text-[12px] text-gray-400">{user.phone}</div>
+                  </td>
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3 text-center text-[13px] text-gray-600">
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {user.location || "—"}
                     </span>
-                  </div>
-                </td>
-                <td className="py-3 px-4 border-r border-b border-[#EEF2FF]">
-                  <div className="flex items-center justify-center gap-3">
-                    <button onClick={() => setViewUser(user)} className="text-blue-500 hover:text-blue-700 transition-colors">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="text-yellow-500 hover:text-yellow-600 transition-colors">
-                      <Shield className="w-4 h-4" />
-                    </button>
-                    <button className="text-red-500 hover:text-red-700 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3 text-center text-[13px] text-gray-600">{formatDate(user.createdAt)}</td>
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3 text-center text-[13px] font-bold text-gray-900">{user.bookingsCount}</td>
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3 text-center text-[13px] font-bold text-gray-900">{formatNaira(user.totalSpent)}</td>
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3 text-center">
+                    <span className={`rounded-full px-2 py-[2px] text-[12px] font-medium ${
+                      user.status === "ACTIVE"
+                        ? "bg-[#3BB515] text-white"
+                        : user.status === "PENDING_APPROVAL"
+                          ? "bg-[#D95C30] text-white"
+                          : "bg-[#FF332C] text-white"
+                    }`}>
+                      {formatStatus(user.status)}
+                    </span>
+                    {user.isFlagged && <span className="ml-1 text-[11px] font-semibold text-amber-700">Flagged</span>}
+                  </td>
+                  <td className="border-b border-r border-[#EEF2FF] px-4 py-3">
+                    <div className="flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openCustomer(user)}
+                        aria-label={`View ${user.name}`}
+                        className="text-blue-500 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openCustomer(user, true)}
+                        aria-label={`${user.isFlagged ? "Unflag" : "Flag"} ${user.name}`}
+                        className="text-yellow-500 transition-colors hover:text-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+                      >
+                        <Shield className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-      {/* Pagination Footer */}
-      <div className="flex items-center justify-between mt-6 shrink-0 bg-white">
-        <span className="text-[13px] text-gray-400 font-medium">Showing 8 results</span>
-        <div className="flex items-center gap-1">
-          <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#4D145D] text-white text-[13px] font-bold">
-            1
+      <div className="mt-6 flex shrink-0 items-center justify-between bg-white">
+        <span className="text-[13px] font-medium text-gray-400">
+          {meta ? `Showing ${customers.length} of ${meta.total} results` : "Loading customers"}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+            disabled={page <= 1 || customersQuery.isFetching}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+          >
+            Previous
           </button>
-          <button className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-[13px] font-medium transition-colors">
-            2
-          </button>
-          <button className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-[13px] font-medium transition-colors">
-            3
-          </button>
-          <span className="w-8 h-8 flex items-center justify-center text-gray-400 text-[13px]">...</span>
-          <button className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-[13px] font-medium transition-colors">
-            10
+          <span className="text-sm text-gray-500">{totalPages ? `${page} / ${totalPages}` : "—"}</span>
+          <button
+            type="button"
+            onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+            disabled={!totalPages || page >= totalPages || customersQuery.isFetching}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+          >
+            Next
           </button>
         </div>
       </div>
 
-      {/* User Profile Modal */}
-      {viewUser && (
+      {customer && viewUserId && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setViewUser(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setViewUserId(null);
+          }}
         >
           <div
-            className="bg-white rounded-[18px] w-[540px] max-h-[90vh] overflow-y-auto hide-scrollbar flex flex-col"
-            style={{ padding: '0 24px 24px 24px' }}
-            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="customer-profile-title"
+            className="hide-scrollbar flex max-h-[90vh] w-full max-w-[540px] flex-col overflow-y-auto rounded-[18px] bg-white px-6 pb-6"
           >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between py-[18px] shrink-0">
-              <h2 className="text-[18px] font-bold text-[#1E1E1E]">User Profile</h2>
-              <button onClick={() => setViewUser(null)} className="text-gray-400 hover:text-gray-700 transition-colors text-[22px] leading-none">&times;</button>
+            <div className="flex shrink-0 items-center justify-between py-[18px]">
+              <h2 id="customer-profile-title" className="text-[18px] font-bold text-[#1E1E1E]">User Profile</h2>
+              <button
+                type="button"
+                onClick={() => setViewUserId(null)}
+                aria-label="Close customer profile"
+                className="text-gray-400 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {/* Avatar & Name Card */}
-            <div className="flex items-center gap-3 bg-[#F3F0FF] rounded-[12px] px-4 py-4 mb-4 shrink-0">
-              <Image
-                src={viewUser.avatar}
-                alt={viewUser.name}
-                width={48}
-                height={48}
-                className="w-[48px] h-[48px] rounded-full object-cover shrink-0"
-              />
-              <div className="flex flex-col gap-1">
-                <p className="text-[16px] font-bold text-[#1E1E1E]">{viewUser.name}</p>
-                <p className="text-[13px] text-gray-500">{viewUser.email}</p>
-                <span className={`self-start px-3 py-[2px] rounded-full text-[12px] font-medium ${
-                  viewUser.status === 'Active' ? 'bg-[#3BB515] text-white' :
-                  viewUser.status === 'Pending' ? 'bg-[#D95C30] text-white' :
-                  'bg-[#FF332C] text-white'
-                }`}>{viewUser.status}</span>
+            {detailQuery.isLoading && (
+              <div className="space-y-3 py-6" aria-label="Loading customer profile">
+                <div className="h-16 animate-pulse rounded-xl bg-gray-200" />
+                <div className="h-32 animate-pulse rounded-xl bg-gray-200" />
+                <div className="h-24 animate-pulse rounded-xl bg-gray-200" />
               </div>
-            </div>
-
-            {/* Registration Details */}
-            <div className="bg-[#F0F1F3] rounded-[14px] p-4 flex flex-col gap-3 mb-4">
-              <p className="text-[13px] font-bold text-gray-700 flex items-center gap-2">
-                <span>📋</span> Registration Details (Submitted by User)
-              </p>
-              {[
-                { label: 'Full Name', value: viewUser.name },
-                { label: 'Email Address', value: viewUser.email },
-                { label: 'Phone Number', value: viewUser.phone },
-                { label: 'Address', value: viewUser.location },
-                { label: 'Bank Account', value: 'Not required (customer)' },
-                { label: 'Terms Agreed', value: `Yes — ${viewUser.joined.split(',')[1]?.trim() ?? viewUser.joined}` },
-              ].map((field) => (
-                <div key={field.label}>
-                  <p className="text-[14px] font-normal text-[#000] mb-1">{field.label}</p>
-                  <div className="bg-white rounded-[10px] border border-[#F3F4F6] px-[10px] py-[10px] flex items-center justify-between">
-                    <span className="text-[14px] font-normal text-gray-700">{field.value}</span>
-                    <Check className="w-4 h-4 text-[#00BC7D] shrink-0" />
+            )}
+            {detailQuery.isError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+                <p>{getErrorMessage(detailQuery.error)}</p>
+                <button type="button" onClick={() => void detailQuery.refetch()} className="mt-2 font-semibold underline">Try again</button>
+              </div>
+            )}
+            {customer && (
+              <form onSubmit={saveCustomer} className="space-y-4">
+                <div className="mb-4 flex shrink-0 items-center gap-3 rounded-[12px] bg-[#F3F0FF] px-4 py-4">
+                  {customer.avatar ? (
+                    <Image src={customer.avatar} alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-lg font-bold text-[#4D145D]" aria-hidden="true">
+                      {customer.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[16px] font-bold text-[#1E1E1E]">{customer.name}</p>
+                    <p className="text-[13px] text-gray-500">{customer.email}</p>
+                    <span className="self-start rounded-full bg-[#3BB515] px-3 py-[2px] text-[12px] font-medium text-white">{formatStatus(customer.status)}</span>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
-                <p className="text-[11px] text-gray-400 mb-1">Joined</p>
-                <p className="text-[15px] font-bold text-gray-900">{viewUser.joined}</p>
-              </div>
-              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
-                <p className="text-[11px] text-gray-400 mb-1">Bookings</p>
-                <p className="text-[15px] font-bold text-gray-900">{viewUser.bookings}</p>
-              </div>
-              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
-                <p className="text-[11px] text-gray-400 mb-1">Total Spent</p>
-                <p className="text-[15px] font-bold text-gray-900">{viewUser.revenue}</p>
-              </div>
-              <div className="bg-[#EAEAEA] rounded-[12px] flex flex-col" style={{ padding: '12px 12px 12px 14px' }}>
-                <p className="text-[11px] text-gray-400 mb-1">Status</p>
-                <p className="text-[15px] font-bold text-gray-900 lowercase">{viewUser.status}</p>
-              </div>
-            </div>
+                {showError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{showError}</p>}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button className="flex-1 h-[42px] rounded-[12px] bg-[#F59E0B] text-white text-[14px] font-medium hover:bg-[#D97706] transition-colors">
-                Flag for Review
-              </button>
-              <button className="flex-1 h-[42px] rounded-[12px] bg-[#FF332C] text-white text-[14px] font-medium hover:bg-[#DC2626] transition-colors">
-                Suspend
-              </button>
-            </div>
+                <div className="flex flex-col gap-3 rounded-[14px] bg-[#F0F1F3] p-4">
+                  <p className="flex items-center gap-2 text-[13px] font-bold text-gray-700"><span aria-hidden="true">📋</span> Registration Details (Submitted by User)</p>
+                  {([
+                    ["Full Name", "name"],
+                    ["Email Address", "email"],
+                    ["Phone Number", "phone"],
+                    ["Address", "location"],
+                  ] as const).map(([label, key]) => (
+                    <label key={key} className="block">
+                      <span className="mb-1 block text-[14px] font-normal text-black">{label}</span>
+                      <input
+                        type={key === "email" ? "email" : "text"}
+                        value={draft[key]}
+                        readOnly={!isEditing}
+                        required={key !== "location"}
+                        onChange={(event) => setDraft((value) => ({ ...value, [key]: event.target.value }))}
+                        className={`w-full rounded-[10px] border border-[#F3F4F6] px-[10px] py-[10px] text-[14px] text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D] ${
+                          isEditing ? "bg-white" : "bg-white"
+                        }`}
+                      />
+                    </label>
+                  ))}
+                  <div>
+                    <span className="mb-1 block text-[14px] font-normal text-black">Bank Account</span>
+                    <div className="flex items-center justify-between rounded-[10px] border border-[#F3F4F6] bg-white px-[10px] py-[10px] text-[14px] text-gray-700">
+                      Not required (customer)
+                      <Check className="h-4 w-4 shrink-0 text-[#00BC7D]" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="mb-1 block text-[14px] font-normal text-black">Terms Agreed</span>
+                    <div className="flex items-center justify-between rounded-[10px] border border-[#F3F4F6] bg-white px-[10px] py-[10px] text-[14px] text-gray-700">
+                      {customer.termsAgreedAt ? formatDate(customer.termsAgreedAt) : "Not recorded"}
+                      {customer.termsAgreedAt && <Check className="h-4 w-4 shrink-0 text-[#00BC7D]" />}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    ["Joined", formatDate(customer.createdAt)],
+                    ["Bookings", String(customer.bookingsCount)],
+                    ["Total Spent", formatNaira(customer.totalSpent)],
+                    ["Status", formatStatus(customer.status)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex flex-col rounded-[12px] bg-[#EAEAEA] p-3">
+                      <p className="mb-1 text-[11px] text-gray-400">{label}</p>
+                      <p className="text-[15px] font-bold text-gray-900">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {isEditing ? (
+                    <>
+                      <button type="button" onClick={() => setIsEditing(false)} className="h-[42px] flex-1 rounded-[12px] border border-gray-200 text-[14px] font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                      <button type="submit" disabled={isMutating} className="h-[42px] flex-1 rounded-[12px] bg-[#4D145D] text-[14px] font-medium text-white hover:bg-[#3D104A] disabled:opacity-60">
+                        {updateUser.isPending ? "Saving…" : "Save Changes"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => setIsEditing(true)} className="h-[42px] flex-1 rounded-[12px] border border-gray-200 text-[14px] font-medium text-gray-700 hover:bg-gray-50">Edit Profile</button>
+                      <button type="button" onClick={() => setIsFlagDialogOpen(true)} className="h-[42px] flex-1 rounded-[12px] bg-[#F59E0B] text-[14px] font-medium text-white hover:bg-[#D97706]">
+                        {customer.isFlagged ? "Remove Flag" : "Flag for Review"}
+                      </button>
+                      <button type="button" onClick={requestStatusChange} disabled={isMutating} className="h-[42px] flex-1 rounded-[12px] bg-[#FF332C] text-[14px] font-medium text-white hover:bg-[#DC2626] disabled:opacity-60">
+                        {customer.status === "SUSPEND" ? "Reinstate" : "Suspend"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-      `}} />
+      {isFlagDialogOpen && customer && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-3">
+          <form onSubmit={submitFlag} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">{customer.isFlagged ? "Remove customer flag" : "Flag customer for review"}</h3>
+              <button type="button" onClick={() => setIsFlagDialogOpen(false)} aria-label="Close flag dialog" className="text-gray-500"><X className="h-5 w-5" /></button>
+            </div>
+            <p className="text-sm text-gray-500">A reason is required for either flag action (at least 5 characters).</p>
+            <textarea
+              value={flagReason}
+              onChange={(event) => setFlagReason(event.target.value)}
+              minLength={5}
+              maxLength={1000}
+              required
+              autoFocus
+              className="min-h-24 w-full rounded-lg border border-gray-300 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"
+              aria-label="Reason for flag change"
+            />
+            {showError && <p className="text-sm text-red-700" role="alert">{showError}</p>}
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setIsFlagDialogOpen(false)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700">Cancel</button>
+              <button type="submit" disabled={flagReason.trim().length < 5 || flagUser.isPending} className="rounded-lg bg-[#4D145D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {flagUser.isPending ? "Saving…" : "Confirm"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      ` }} />
+      <ReasonDialog
+        open={statusDialog !== null}
+        title={statusDialog === "reinstate" ? "Reinstate customer" : "Suspend customer"}
+        message={customer ? (statusDialog === "reinstate" ? <>Reinstate <strong>{customer.name}</strong>? They can sign in and book again immediately.</> : <>Suspend <strong>{customer.name}</strong>? They are signed out and can&apos;t book or order until reinstated.</>) : null}
+        confirmLabel={statusDialog === "reinstate" ? "Reinstate" : "Suspend"}
+        tone={statusDialog === "reinstate" ? "green" : "red"}
+        busy={accountAction.isPending}
+        onConfirm={(reason) => void changeAccountStatus(reason)}
+        onClose={() => setStatusDialog(null)}
+      />
     </div>
   );
 }

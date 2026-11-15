@@ -1,171 +1,44 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Ticket, TicketStatus } from "@/types/ticket";
-import { categoryIcon, categoryIconStyles, priorityStyles } from "@/lib/ticket-styles";
-import { cn } from "@/lib/utils";
+import { Briefcase, Scissors, ShoppingBag, UserRound } from "lucide-react";
+import type { ReactNode } from "react";
+import { StatusPill } from "@/components/admin/common/kit";
+import { titleCase } from "@/lib/admin/format";
+import type { Ticket } from "@/lib/admin/resources";
 
-interface TicketListProps {
-  tickets: Ticket[];
-  selectedTicketId: string | null;
-  onSelectTicket: (ticketId: string) => void;
-}
+const AUDIENCE: Record<string, { label: string; icon: ReactNode; tint: string }> = {
+  CUSTOMER: { label: "Customer Support", icon: <UserRound className="h-4 w-4" aria-hidden />, tint: "bg-[#EEF2FF] text-[#4F46E5]" },
+  STYLIST: { label: "Stylist Support", icon: <Scissors className="h-4 w-4" aria-hidden />, tint: "bg-[#F5F3FF] text-[#7C3AED]" },
+  VENDOR: { label: "Vendor Support", icon: <ShoppingBag className="h-4 w-4" aria-hidden />, tint: "bg-[#FFF1F2] text-[#E11D48]" },
+  STREET_AGENT: { label: "Agent Support", icon: <Briefcase className="h-4 w-4" aria-hidden />, tint: "bg-[#ECFDF5] text-[#059669]" },
+};
+export const audienceMeta = (audience: string) => AUDIENCE[audience] ?? { label: titleCase(audience), icon: <UserRound className="h-4 w-4" aria-hidden />, tint: "bg-gray-100 text-gray-600" };
+/** The API's PENDING state is shown as "Open" in the admin Figma. */
+export const statusLabel = (status: string) => (status === "PENDING" ? "Open" : titleCase(status));
 
-const FILTERS: (TicketStatus | "All")[] = [
-  "All",
-  "Open",
-  "Under review",
-  "Resolved",
-  "Closed",
-];
-
-export function TicketList({
-  tickets,
-  selectedTicketId,
-  onSelectTicket,
-}: TicketListProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<TicketStatus | "All">(
-    "All"
-  );
-
-  const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
-      const matchesStatus =
-        statusFilter === "All" || ticket.status === statusFilter;
-      const query = search.trim().toLowerCase();
-      const matchesSearch =
-        query.length === 0 ||
-        ticket.id.toLowerCase().includes(query) ||
-        ticket.subject.toLowerCase().includes(query) ||
-        ticket.requesterName.toLowerCase().includes(query);
-      return matchesStatus && matchesSearch;
-    });
-  }, [tickets, search, statusFilter]);
-
+export function TicketList({ tickets, selectedId, onSelect, loading, error, onRetry }: { tickets: Ticket[]; selectedId: string | null; onSelect: (id: string) => void; loading: boolean; error: string | null; onRetry: () => void }) {
+  if (loading) return <div className="space-y-3 p-4" aria-label="Loading tickets">{Array.from({ length: 6 }, (_, i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100" />)}</div>;
+  if (error) return <div className="p-6 text-center"><p role="alert" className="text-[14px] font-medium text-red-700">{error}</p><button type="button" onClick={onRetry} className="mt-3 cursor-pointer rounded-md border border-red-200 px-3 py-1.5 text-[13px] text-red-700 hover:bg-red-50">Try again</button></div>;
+  if (tickets.length === 0) return <div className="p-8 text-center"><p className="text-[14px] font-medium text-gray-800">No tickets match these filters</p><p className="mt-1 text-[13px] text-gray-500">New support requests appear here as users submit them.</p></div>;
   return (
-    <div className="flex h-full flex-col bg-white">
-      {/* Search + filter */}
-      <div className="flex items-center gap-2 border-b p-4">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tickets..."
-            className="rounded-full pl-9"
-          />
-        </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(value) =>
-            setStatusFilter(value as TicketStatus | "All")
-          }
-        >
-          <SelectTrigger className="w-24 rounded-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FILTERS.map((filter) => (
-              <SelectItem key={filter} value={filter}>
-                {filter}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Ticket list */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredTickets.length === 0 ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">
-            No tickets match your search.
-          </div>
-        ) : (
-          filteredTickets.map((ticket) => {
-            const Icon = categoryIcon[ticket.category];
-            const isSelected = ticket.id === selectedTicketId;
-
-            return (
-              <button
-                key={ticket.id}
-                onClick={() => onSelectTicket(ticket.id)}
-                className={cn(
-                  "flex w-full items-start gap-3 border-b border-gray-100 px-4 py-4 text-left transition-colors hover:bg-muted/50",
-                  isSelected && "bg-violet-50 hover:bg-violet-50"
-                )}
-              >
-                <div
-                  className={cn(
-                    "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                    categoryIconStyles[ticket.category]
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-violet-700">
-                      {ticket.id}
-                    </span>
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium",
-                        priorityStyles[ticket.priority]
-                      )}
-                    >
-                      {ticket.priority}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 truncate text-sm font-semibold text-foreground">
-                    {ticket.subject}
-                  </p>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {ticket.requesterName}
-                  </p>
-
-                  <div className="mt-2 flex items-center justify-between">
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-xs font-medium",
-                        {
-                          "bg-amber-50 text-amber-700 border-amber-300":
-                            ticket.status === "Open",
-                          "bg-slate-100 text-slate-500 border-slate-300":
-                            ticket.status === "Closed",
-                          "bg-blue-50 text-blue-600 border-blue-300":
-                            ticket.status === "Under review",
-                          "bg-emerald-50 text-emerald-600 border-emerald-300":
-                            ticket.status === "Resolved",
-                        }
-                      )}
-                    >
-                      {ticket.status}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {ticket.messages.length - 1 > 0
-                        ? ticket.messages.length - 1
-                        : 0}{" "}
-                      replies
-                    </span>
-                  </div>
-                </div>
-              </button>
-            );
-          })
-        )}
-      </div>
-    </div>
+    <ul className="divide-y divide-gray-100">
+      {tickets.map((ticket) => {
+        const audience = audienceMeta(ticket.audience);
+        const active = ticket.id === selectedId;
+        return (
+          <li key={ticket.id}>
+            <button type="button" aria-current={active ? "true" : undefined} onClick={() => onSelect(ticket.id)} className={`flex w-full cursor-pointer items-start gap-3 px-4 py-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#4D145D] ${active ? "bg-[#F6EEFB]" : "hover:bg-gray-50"}`}>
+              <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${audience.tint}`}>{audience.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-start justify-between gap-2"><span className="text-[11px] font-bold text-[#4D145D]">{ticket.ticketNumber}</span><StatusPill status={ticket.priority} /></span>
+                <span className="mt-0.5 block truncate text-[13px] font-semibold text-gray-900">{ticket.subject}</span>
+                <span className="block truncate text-[12px] text-gray-500">{ticket.userName ?? audience.label}</span>
+                <span className="mt-1.5 flex items-center justify-between"><StatusPill status={ticket.status} label={statusLabel(ticket.status)} /><span className="text-[11px] text-gray-400">{ticket.replyCount} {ticket.replyCount === 1 ? "reply" : "replies"}</span></span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
