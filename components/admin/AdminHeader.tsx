@@ -26,6 +26,14 @@ const PAGE_TITLES: Record<string, string> = {
   support: "Support Center",
 };
 
+const SEARCHABLE_PAGES = [
+  { label: "Dashboard", href: "/dashboard" },
+  ...Object.entries(PAGE_TITLES).map(([segment, label]) => ({
+    label,
+    href: `/dashboard/${segment}`,
+  })),
+];
+
 interface AdminHeaderProps {
   onMenuClick?: () => void;
 }
@@ -83,7 +91,11 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     };
   }, [query]);
 
-  const searchItems = results
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const pageItems = SEARCHABLE_PAGES.filter((item) =>
+    item.label.toLocaleLowerCase().includes(normalizedQuery),
+  );
+  const recordItems = results
     ? [
         ...results.users.map((item) => ({
           label: item.name,
@@ -195,11 +207,20 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                   {searchError}
                 </p>
               )}
-              {!searching && !searchError && results && searchItems.length === 0 && (
-                <p className="px-3 py-2 text-sm text-gray-500">No matching records.</p>
-              )}
+              {pageItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setQuery("")}
+                  className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-primary"
+                  role="option"
+                >
+                  <span className="truncate">{item.label}</span>
+                  <span className="shrink-0 text-xs text-gray-500">Page</span>
+                </Link>
+              ))}
               {!searching &&
-                searchItems.map((item, index) => (
+                recordItems.map((item, index) => (
                   <Link
                     key={`${item.detail}-${item.label}-${index}`}
                     href={item.href}
@@ -211,6 +232,9 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                     <span className="shrink-0 text-xs text-gray-500">{item.detail}</span>
                   </Link>
                 ))}
+              {!searching && !searchError && results && pageItems.length === 0 && recordItems.length === 0 && (
+                <p className="px-3 py-2 text-sm text-gray-500">No matching pages or records.</p>
+              )}
             </div>
           )}
         </div>
