@@ -5,7 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { Modal, Field, GhostButton, PrimaryButton, textareaClass } from "@/components/admin/common/Modal";
 import { StatusPill } from "@/components/admin/common/kit";
 import { formatDateTime, formatNaira, titleCase } from "@/lib/admin/format";
-import { useBookingDetail, useOrderDetail, usePayouts, useProcessPayout, useReleaseEscrow, type Transaction } from "@/lib/admin/resources";
+import { useBookingDetail, useOrderDetail, usePayoutDetail, usePayouts, useProcessPayout, useReleaseEscrow, type Transaction } from "@/lib/admin/resources";
 import { ApiError } from "@/lib/api/errors";
 
 type Notify = (kind: "success" | "error", text: string) => void;
@@ -97,13 +97,16 @@ export function ProcessPayoutModal({ entry, onClose, onNotice }: { entry: Transa
   );
 }
 
-export function PayoutDetailsModal({ entry, onClose }: { entry: Transaction | null; onClose: () => void }) {
+export function PayoutDetailsModal({ entry, payoutId, onClose }: { entry: Transaction | null; payoutId?: string | null; onClose: () => void }) {
   const lookup = usePayouts({ page: 1, limit: 1, search: entry?.reference ?? "__none__" });
-  const payout = entry ? lookup.data?.rows.find((row) => row.id === entry.sourceId) ?? lookup.data?.rows[0] : undefined;
+  const detail = usePayoutDetail(payoutId ?? null);
+  const payout = payoutId ? detail.data : entry ? lookup.data?.rows.find((row) => row.id === entry.sourceId) : undefined;
+  const loading = payoutId ? detail.isLoading : lookup.isLoading;
+  const error = payoutId ? detail.error : lookup.error;
   return (
-    <Modal open={!!entry} onClose={onClose} title="Payout Details" width="max-w-[460px]" footer={<GhostButton onClick={onClose}>Close</GhostButton>}>
-      {lookup.isLoading ? <div className="h-32 animate-pulse rounded bg-gray-100" aria-label="Loading payout" />
-        : !payout ? <p role="alert" className="text-[14px] text-red-700">{lookup.error?.message ?? "This payout could not be found."}</p>
+    <Modal open={!!entry || !!payoutId} onClose={onClose} title="Payout Details" width="max-w-[460px]" footer={<GhostButton onClick={onClose}>Close</GhostButton>}>
+      {loading ? <div className="h-32 animate-pulse rounded bg-gray-100" aria-label="Loading payout" />
+        : !payout ? <p role="alert" className="text-[14px] text-red-700">{error?.message ?? "This payout could not be found."}</p>
         : (
           <dl className="space-y-3 text-[14px]">
             {[["Reference", payout.reference], ["Owner", titleCase(payout.ownerType)], ["Bank", payout.bankName ?? "—"], ["Account", payout.maskedAccount ?? "—"], ["Amount", formatNaira(payout.amount)], ["Fee", formatNaira(payout.fee)], ["Net", formatNaira(payout.netAmount)], ["Requested", formatDateTime(payout.createdAt)], ["Processed", formatDateTime(payout.processedAt)]].map(([label, value]) => <div key={label} className="flex justify-between gap-4"><dt className="text-gray-500">{label}</dt><dd className="text-right font-semibold">{value}</dd></div>)}

@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationTarget } from "@/components/admin/notifications/NotificationTarget";
+
 import { useState } from "react";
 import { Download, Eye, Filter, RefreshCw } from "lucide-react";
 import Headers from "@/components/admin/common/Headers";
@@ -47,6 +49,7 @@ export default function BookingsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] flex-col bg-white p-1 md:p-8">
+      <NotificationTarget onTarget={(id) => { setSelected(id); }} />
       <Headers title="Bookings Overview" description="Monitor all hair service bookings and their status" buttonOneIcon={<Download className="h-4 w-4" />} buttonOneText="Export Report" buttonOneAction={() => void exportCsv()} buttonTwoIcon={<RefreshCw className="h-4 w-4" />} buttonTwoText="Refresh" buttonTwoAction={() => void query.refetch()} buttonTwoDisabled={query.isFetching} />
       <Notice notice={notice} onDismiss={() => setNotice(null)} />
       <section aria-label="Booking totals" className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">

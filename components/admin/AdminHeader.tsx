@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Bell, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
+import { NotificationBell } from "@/components/admin/notifications/NotificationBell";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -244,11 +245,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
           <Search className="w-[18px] h-[18px] text-white" />
         </span>
 
-        {/* Bell */}
-        <span aria-hidden="true" className="relative w-[40px] h-[40px] md:w-[52px] md:h-[52px] flex items-center justify-center rounded-[10px] bg-[rgba(255,255,255,0.12)] flex-shrink-0">
-          <Bell className="w-[18px] h-[18px] md:w-[20px] md:h-[20px] text-white" />
-          <span className="absolute top-[9px] right-[10px] md:top-[11px] md:right-[12px] w-[8px] h-[8px] rounded-full bg-[#F97316] border-2 border-admin-primary" />
-        </span>
+        {/* Bell — live inbox (TASK-057); badge only when there are unread items */}
+        <NotificationBell />
 
         {/* Profile — Figma: Frame 36, display:flex, align-items:center, gap:26px, padding:22px */}
         <div className="flex items-center gap-[10px] h-[40px] md:h-[52px] px-[8px] md:px-[14px] rounded-[10px] bg-[rgba(255,255,255,0.12)] flex-shrink-0">

@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationTarget } from "@/components/admin/notifications/NotificationTarget";
+
 import { useState } from "react";
 import { CalendarDays, Clock, Download, Eye, RefreshCw, ShoppingCart, TrendingUp } from "lucide-react";
 import Headers from "@/components/admin/common/Headers";
@@ -28,6 +30,7 @@ export default function PaymentsPage() {
   const [page, setPage] = useState(1);
   const [releasing, setReleasing] = useState<Transaction | null>(null);
   const [processing, setProcessing] = useState<Transaction | null>(null);
+  const [notificationPayoutId, setNotificationPayoutId] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Transaction | null>(null);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const debounced = useDebounced(search);
@@ -48,6 +51,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] flex-col bg-white p-1 md:p-8">
+      <NotificationTarget onTarget={(id) => { setNotificationPayoutId(id); setTab("PAYOUT"); }} />
       <Headers title="Escrow & Payments Monitor" description="Track all escrow transactions across service bookings and product orders" buttonOneIcon={<Download className="h-4 w-4" />} buttonOneText="Export Report" buttonOneAction={() => void exportCsv()} buttonTwoIcon={<RefreshCw className="h-4 w-4" />} buttonTwoText="Refresh" buttonTwoAction={refresh} buttonTwoDisabled={query.isFetching} />
       <Notice notice={notice} onDismiss={() => setNotice(null)} />
       {overview.error ? <p role="alert" className="mb-4 rounded-[10px] bg-red-50 p-3 text-[13px] text-red-700">{errorText(overview.error)}</p> : null}
@@ -88,7 +92,7 @@ export default function PaymentsPage() {
       <ProcessPayoutModal entry={processing} onClose={() => setProcessing(null)} onNotice={notify} />
       <BookingDetailsModal bookingId={viewing?.source === "BOOKING" ? viewing.sourceId : null} onClose={() => setViewing(null)} onNotice={notify} />
       <OrderDetailsModal orderId={viewing?.source === "ORDER" ? viewing.sourceId : null} onClose={() => setViewing(null)} onNotice={notify} />
-      <PayoutDetailsModal entry={viewing?.source === "PAYOUT" ? viewing : null} onClose={() => setViewing(null)} />
+      <PayoutDetailsModal payoutId={notificationPayoutId} entry={viewing?.source === "PAYOUT" ? viewing : null} onClose={() => { setViewing(null); setNotificationPayoutId(null); }} />
     </div>
   );
 }

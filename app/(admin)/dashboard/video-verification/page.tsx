@@ -1,6 +1,12 @@
 "use client";
 
+import { NotificationTarget } from "@/components/admin/notifications/NotificationTarget";
+
 import React, { useMemo, useState } from "react";
+import { apiClient } from "@/lib/api-client";
+import { z } from "zod";
+import { findNotificationTarget } from "@/lib/admin/notification-target";
+import { buildVerificationListPath, pendingServiceReviewSchema } from "@/lib/admin/people";
 import Image from "next/image";
 import {
   CheckCircle2,
@@ -53,6 +59,7 @@ export default function VideoVerificationPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "account" | "service">("all");
+  const [notificationGroup, setNotificationGroup] = useState<VerificationQueueGroup | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<ReviewTarget | null>(null);
@@ -83,10 +90,9 @@ export default function VideoVerificationPage() {
         ? group.services.length > 0
         : true,
   );
-  const selectedGroup =
-    visibleQueue.find((group) => group.user.userId === selectedUserId) ??
-    visibleQueue[0] ??
-    null;
+  const selectedGroup = notificationGroup ?? (selectedUserId
+    ? visibleQueue.find((group) => group.user.userId === selectedUserId) ?? null
+    : visibleQueue[0] ?? null);
   const selectedDetail = useStylistDetail(selectedGroup?.user.userId ?? null);
   const selectedService =
     selectedGroup?.services.find((service) => service.id === selectedServiceId) ??
@@ -101,6 +107,7 @@ export default function VideoVerificationPage() {
     (reviewService.error ? getErrorMessage(reviewService.error) : null);
 
   const selectGroup = (group: VerificationQueueGroup) => {
+    setNotificationGroup(null);
     setSelectedUserId(group.user.userId);
     setSelectedServiceId(group.services[0]?.id ?? null);
     setActionError(null);
@@ -166,6 +173,14 @@ export default function VideoVerificationPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] flex-col overflow-y-auto p-1 md:p-4">
+      <NotificationTarget onTarget={async (id, signal) => {
+        const target = await findNotificationTarget(id, async (targetPage) => {
+          const result = await apiClient.admin.request(buildVerificationListPath("stylist-services/pending", { page: targetPage, limit: PAGE_SIZE, search: "" }), { method: "GET", signal }, (data) => z.array(pendingServiceReviewSchema).parse(data));
+          return { rows: result.data, totalPages: z.object({ totalPages: z.number() }).parse(result.meta).totalPages };
+        }, (row) => row.service.id, signal);
+        setNotificationGroup({ user: target.user, services: [target.service], accountPending: false });
+        setSelectedUserId(target.user.userId); setSelectedServiceId(target.service.id);
+      }} />
       <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[24px] font-bold text-[#1E1E1E]">Video Verification Queue</h1>

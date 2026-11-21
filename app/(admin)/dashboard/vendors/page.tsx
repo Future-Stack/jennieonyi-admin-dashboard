@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationTarget } from "@/components/admin/notifications/NotificationTarget";
+
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, Clock, Download, Eye, RefreshCw, Store, Wallet } from "lucide-react";
 import Headers from "@/components/admin/common/Headers";
@@ -8,7 +10,7 @@ import { Notice } from "@/components/admin/common/Modal";
 import { CommissionModal, PenaltyModal, ProviderActionModal, VendorProfileModal, toProviderTarget, vendorStatusLabel, type ActionKind } from "@/components/admin/vendors/VendorModals";
 import { formatNaira } from "@/lib/admin/format";
 import { useDashboardAnalytics } from "@/lib/admin/dashboard";
-import { directoryPath, useVendors, type Vendor } from "@/lib/admin/vendors-agents";
+import { directoryPath, vendorDisplayName, vendorSchema, useVendors, type Vendor } from "@/lib/admin/vendors-agents";
 import { useDebounced } from "@/lib/admin/use-debounced";
 import { apiClient } from "@/lib/api-client";
 
@@ -49,6 +51,7 @@ export default function VendorsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] flex-col bg-white p-1 md:p-8">
+      <NotificationTarget onTarget={async (id, signal) => { const result = await apiClient.admin.request(`vendors/${encodeURIComponent(id)}`, { method: "GET", signal }, (data) => vendorSchema.parse(data)); if (!signal.aborted) setProfile(result.data); }} />
       <Headers title="Vendor Management" description="Manage marketplace vendors, approvals, and performance" buttonOneIcon={<Download className="h-4 w-4" />} buttonOneText="Export Report" buttonOneAction={() => void exportCsv()} buttonTwoIcon={<RefreshCw className="h-4 w-4" />} buttonTwoText="Refresh" buttonTwoAction={refresh} buttonTwoDisabled={query.isFetching} />
       <Notice notice={notice} onDismiss={() => setNotice(null)} />
       <section aria-label="Vendor totals" className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -60,7 +63,7 @@ export default function VendorsPage() {
       {highRiskTotal > 0 ? (
         <div role="alert" className="mb-4 flex items-start gap-3 rounded-[16px] border border-[#FFC9C9] bg-[#FEF2F2] p-4">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#C10007]" aria-hidden />
-          <div><p className="text-[14px] font-bold text-[#C10007]">High Refund Rate Alert — Seller Penalty Required</p><p className="mt-0.5 text-[13px] text-[#C10007]">{highRisk.map((vendor) => `${vendor.storeName} (${vendor.refundRate}% refund rate)`).join(", ")}{highRiskTotal > highRisk.length ? ` and ${highRiskTotal - highRisk.length} more` : ""} — vendor-fault returns detected. Return shipping liability applies.</p></div>
+          <div><p className="text-[14px] font-bold text-[#C10007]">High Refund Rate Alert — Seller Penalty Required</p><p className="mt-0.5 text-[13px] text-[#C10007]">{highRisk.map((vendor) => `${vendorDisplayName(vendor)} (${vendor.refundRate}% refund rate)`).join(", ")}{highRiskTotal > highRisk.length ? ` and ${highRiskTotal - highRisk.length} more` : ""} — vendor-fault returns detected. Return shipping liability applies.</p></div>
           <button type="button" onClick={() => { setRisk("HIGH_RISK"); setPage(1); }} className="ml-auto shrink-0 cursor-pointer rounded-md border border-[#FFC9C9] bg-white px-3 py-1.5 text-[12px] font-medium text-[#C10007] hover:bg-red-50">Show vendors</button>
         </div>
       ) : null}
@@ -74,17 +77,17 @@ export default function VendorsPage() {
       <DataTable columns={COLUMNS} loading={query.isLoading} error={errorText(query.error)} empty={rows.length === 0} onRetry={() => void query.refetch()}>
         {rows.map((vendor) => (
           <tr key={vendor.userId} className="hover:bg-[#F8F6FA]">
-            <td className="px-4 py-3"><div className="flex items-center gap-3"><span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-gradient-to-br from-[#4D145D] to-[#7B2796]"><Store className="h-4 w-4 text-white" /></span><div className="min-w-0"><p className="truncate text-[13px] font-bold text-gray-900">{vendor.storeName}</p><p className="truncate text-[11px] text-gray-500">{vendor.name} · {vendor.email}</p></div></div></td>
+            <td className="px-4 py-3"><div className="flex items-center gap-3"><span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-gradient-to-br from-[#4D145D] to-[#7B2796]"><Store className="h-4 w-4 text-white" /></span><div className="min-w-0"><p className="flex items-center gap-2 truncate text-[13px] font-bold text-gray-900">{vendorDisplayName(vendor)}{vendor.profileComplete ? null : <span title="This vendor account has no store profile; store figures are unavailable." className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">Profile incomplete</span>}</p><p className="truncate text-[11px] text-gray-500">{vendor.storeName === null ? vendor.email : `${vendor.name} · ${vendor.email}`}</p></div></div></td>
             <td className="px-4 py-3 text-center text-[12px] text-gray-700" title={vendor.categories.join(", ")}>{vendor.categories[0] ?? "—"}{vendor.categories.length > 1 ? <span className="text-gray-400"> +{vendor.categories.length - 1}</span> : null}</td>
             <td className="px-4 py-3 text-center text-[13px] font-bold">{vendor.productCount}</td>
             <td className="px-4 py-3 text-center text-[13px] font-bold">{vendor.orderCount}</td>
-            <td className="px-4 py-3 text-center text-[13px] font-bold">{formatNaira(vendor.revenue)}</td>
-            <td className="px-4 py-3 text-center text-[13px]">{vendor.rating > 0 ? `★ ${vendor.rating.toFixed(1)}` : "—"}</td>
+            <td className="px-4 py-3 text-center text-[13px] font-bold">{vendor.revenue === null ? "—" : formatNaira(vendor.revenue)}</td>
+            <td className="px-4 py-3 text-center text-[13px]">{vendor.rating !== null && vendor.rating > 0 ? `★ ${vendor.rating.toFixed(1)}` : "—"}</td>
             <td className="px-4 py-3 text-center text-[13px] font-medium">{vendor.commissionRate === null ? "Default" : `${vendor.commissionRate}%`}</td>
             <td className="px-4 py-3 text-center"><StatusPill status={vendor.status} label={vendorStatusLabel(vendor.status)} tone={vendor.status === "ACTIVE" ? "green" : vendor.status === "SUSPEND" ? "red" : vendor.status === "PENDING_APPROVAL" ? "amber" : "gray"} /></td>
             <td className="px-4 py-3"><div className="flex items-center justify-center gap-2">
-              <button type="button" aria-label={`View ${vendor.storeName}`} onClick={() => setProfile(vendor)} className="cursor-pointer rounded-md p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"><Eye className="h-4 w-4" /></button>
-              {vendor.status === "PENDING_APPROVAL" ? <>
+              <button type="button" aria-label={`View ${vendorDisplayName(vendor)}`} onClick={() => setProfile(vendor)} className="cursor-pointer rounded-md p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D]"><Eye className="h-4 w-4" /></button>
+              {vendor.status === "PENDING_APPROVAL" && vendor.profileComplete ? <>
                 <button type="button" onClick={() => openAction(vendor, "approve")} className="cursor-pointer rounded-full bg-[#3BB515] px-2.5 py-0.5 text-[11px] font-medium text-white hover:bg-[#2F9E0F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D] focus-visible:ring-offset-1">Approve</button>
                 <button type="button" onClick={() => openAction(vendor, "reject")} className="cursor-pointer rounded-full bg-[#FF332C] px-2.5 py-0.5 text-[11px] font-medium text-white hover:bg-[#DC2626] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D] focus-visible:ring-offset-1">Reject</button>
               </> : vendor.status === "SUSPEND" ? <button type="button" onClick={() => openAction(vendor, "reinstate")} className="cursor-pointer rounded-full bg-[#3BB515] px-2.5 py-0.5 text-[11px] font-medium text-white hover:bg-[#2F9E0F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4D145D] focus-visible:ring-offset-1">Reinstate</button>

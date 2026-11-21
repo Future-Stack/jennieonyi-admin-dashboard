@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /** Accessible modal (focus trap, Escape, overlay click) in the admin panel's visual style. */
 export function Modal({ open, onClose, title, description, children, footer, width = "max-w-[540px]" }: { open: boolean; onClose: () => void; title: string; description?: string; children: ReactNode; footer?: ReactNode; width?: string }) {
+  // TASK-060: the caller's width must hold at every breakpoint (a plain `max-w-[…]` lost to `sm:max-w-none`),
+  // while keeping a 1rem gutter on narrow screens. The width becomes a CSS variable read by literal classes.
+  const px = /^max-w-\[(\d+)px\]$/.exec(width.trim())?.[1];
+  const sizing = px ? "max-w-[min(var(--modal-max),calc(100%-2rem))] sm:max-w-[min(var(--modal-max),calc(100%-2rem))]" : `sm:max-w-none ${width}`;
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className={`flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden rounded-[18px] border-none bg-white p-0 shadow-2xl sm:max-w-none ${width}`}>
+      <DialogContent style={px ? ({ "--modal-max": `${px}px` } as CSSProperties) : undefined} className={`flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden rounded-[18px] border-none bg-white p-0 shadow-2xl ${sizing}`}>
         <DialogHeader className="border-b border-gray-100 px-6 py-5">
           <DialogTitle className="text-[20px] font-bold text-[#1E293B]">{title}</DialogTitle>
           {description ? <DialogDescription className="mt-1 text-[13px] text-gray-500">{description}</DialogDescription> : null}
