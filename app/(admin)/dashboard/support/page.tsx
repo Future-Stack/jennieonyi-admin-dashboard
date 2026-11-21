@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationTarget } from "@/components/admin/notifications/NotificationTarget";
+
 import { useState } from "react";
 import { Download, RefreshCw } from "lucide-react";
 import Headers from "@/components/admin/common/Headers";
@@ -35,7 +37,7 @@ export default function SupportPage() {
   const rows = query.data?.rows ?? [];
   const meta = query.data?.meta;
   const stats = overall.data?.meta.stats;
-  const activeId = selectedId && rows.some((row) => row.id === selectedId) ? selectedId : rows[0]?.id ?? null;
+  const activeId = selectedId ?? rows[0]?.id ?? null;
   const notify = (kind: "success" | "error", text: string) => setNotice({ kind, text });
   const pad = (value: number | undefined) => (value === undefined ? "—" : String(value).padStart(2, "0"));
 
@@ -47,6 +49,7 @@ export default function SupportPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] flex-col bg-white p-1 md:p-8">
+      <NotificationTarget onTarget={(id) => { setSelectedId(id); }} />
       <Headers title="Support Center" description="Handle all support requests — customers, stylists, vendors, and technical issues" buttonOneIcon={<Download className="h-4 w-4" />} buttonOneText="Export Report" buttonOneAction={() => void exportCsv()} buttonTwoIcon={<RefreshCw className="h-4 w-4" />} buttonTwoText="Refresh" buttonTwoAction={refresh} buttonTwoDisabled={query.isFetching} />
       <Notice notice={notice} onDismiss={() => setNotice(null)} />
       <section aria-label="Ticket totals" className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">

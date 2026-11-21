@@ -1,3 +1,4 @@
+import { parseInboxPage, parseTicket, parseUnread, type InboxFilter } from "@/lib/admin/notifications";
 import {
   adminProfileSchema,
   adminSearchResultSchema,
@@ -7,6 +8,7 @@ import {
   type ApiEnvelope,
 } from "@/lib/api/contracts";
 import { ApiError, BackendProtocolError } from "@/lib/api/errors";
+import { ZodError } from "zod";
 
 let sessionRefreshInFlight: Promise<void> | null = null;
 
@@ -72,7 +74,7 @@ async function request<T>(
 
   if (
     response.status === 401 &&
-    path.startsWith("/api/admin/") &&
+    (path.startsWith("/api/admin/") || path.startsWith("/api/notifications")) &&
     !retriedAfterRefresh
   ) {
     try {
@@ -130,11 +132,25 @@ function parseEnvelope<T>(
     throw new BackendProtocolError("The Admin API returned an invalid response.");
   }
 
+  let data: T;
+  try {
+    data = parseData(body.data);
+  } catch (cause) {
+    // TASK-059: a contract mismatch still rejects the data, but never shows raw validation issues to admins.
+    if (cause instanceof ZodError) {
+      console.error("Admin API contract mismatch", cause.issues);
+      throw new BackendProtocolError(
+        "Some records returned by the server could not be displayed. Please retry; if this continues, contact support.",
+      );
+    }
+    throw cause;
+  }
+
   return {
     statusCode: body.statusCode,
     message: body.message,
     meta: "meta" in body ? body.meta : null,
-    data: parseData(body.data),
+    data,
     ...("timestamp" in body && typeof body.timestamp === "string"
       ? { timestamp: body.timestamp }
       : {}),
@@ -176,6 +192,25 @@ function parseSearchResults(body: unknown): ApiEnvelope<AdminSearchResults> {
 }
 
 export const apiClient = {
+  // TASK-057: Admin notification inbox (BFF → backend /notifications).
+  notifications: {
+    list(filter: InboxFilter, page = 1, signal?: AbortSignal) {
+      const params = new URLSearchParams({ status: filter, page: String(page), limit: "15" });
+      return request(`/api/notifications?${params.toString()}`, { method: "GET", signal }, parseInboxPage);
+    },
+    unreadCount(signal?: AbortSignal) {
+      return request("/api/notifications/unread-count", { method: "GET", signal }, parseUnread);
+    },
+    markRead(id: string) {
+      return request(`/api/notifications/${encodeURIComponent(id)}/read`, { method: "PATCH" }, (body) => body);
+    },
+    markAllRead() {
+      return request("/api/notifications/read-all", { method: "PATCH" }, (body) => body);
+    },
+    socketTicket() {
+      return request("/api/notifications/socket-ticket", { method: "POST" }, parseTicket);
+    },
+  },
   auth: {
     login(input: AdminLoginInput) {
       return request("/api/auth/login", {

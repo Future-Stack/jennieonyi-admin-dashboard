@@ -5,7 +5,7 @@ import { AlertTriangle, ExternalLink, FileText, Mail, MapPin, Phone } from "luci
 import { Avatar, StatusPill } from "@/components/admin/common/kit";
 import { Field, GhostButton, Modal, PrimaryButton, inputClass, textareaClass } from "@/components/admin/common/Modal";
 import { formatDate, formatNaira, titleCase } from "@/lib/admin/format";
-import { useCommission, useIssuePenalty, useProviderAction, useVendorKyc, useVendorPenalties, useVendorQuality, useWaivePenalty, type Vendor } from "@/lib/admin/vendors-agents";
+import { useCommission, useIssuePenalty, useProviderAction, useVendorKyc, useVendorPenalties, useVendorQuality, useWaivePenalty, vendorDisplayName, type Vendor } from "@/lib/admin/vendors-agents";
 import { ApiError } from "@/lib/api/errors";
 
 type Notify = (kind: "success" | "error", text: string) => void;
@@ -17,7 +17,7 @@ const RISK: Record<string, { label: string; cls: string }> = { HEALTHY: { label:
 
 export type ActionKind = "approve" | "reject" | "suspend" | "reinstate";
 export interface ProviderTarget { userId: string; displayName: string; name: string; email: string; avatar: string | null }
-export const toProviderTarget = (vendor: Vendor): ProviderTarget => ({ userId: vendor.userId, displayName: vendor.storeName, name: vendor.name, email: vendor.email, avatar: vendor.avatar });
+export const toProviderTarget = (vendor: Vendor): ProviderTarget => ({ userId: vendor.userId, displayName: vendorDisplayName(vendor), name: vendor.name, email: vendor.email, avatar: vendor.avatar });
 const COPY: Record<ActionKind, { title: string; tone: "green" | "red" | "orange" | "purple"; needsReason: boolean; blurb: (n: string, noun: string) => string; done: (n: string) => string }> = {
   approve: { title: "Approve", tone: "green", needsReason: false, blurb: (n, noun) => `${n} will be able to work on PlaitAm as ${noun === "vendor" ? "a vendor" : "an agent"}. They are notified by email.`, done: (n) => `${n} was approved.` },
   reject: { title: "Reject", tone: "red", needsReason: true, blurb: (n) => `${n}'s registration will be rejected. The reason is sent so they can correct it and re-apply.`, done: (n) => `${n}'s registration was rejected.` },
@@ -108,8 +108,10 @@ export function PenaltyModal({ vendor, onClose, onNotice }: { vendor: Vendor | n
 /* ---------- profile ---------- */
 
 export function VendorProfileModal({ vendor, onClose, onAction, onCommission, onPenalty, onNotice }: { vendor: Vendor | null; onClose: () => void; onAction: (vendor: Vendor, action: ActionKind) => void; onCommission: (vendor: Vendor) => void; onPenalty: (vendor: Vendor) => void; onNotice: Notify }) {
-  const id = vendor?.userId ?? null;
-  const pending = vendor?.status === "PENDING_APPROVAL";
+  // TASK-059: an account without a store profile has no quality, penalty or KYC record to load.
+  const incomplete = vendor ? !vendor.profileComplete : false;
+  const id = vendor && !incomplete ? vendor.userId : null;
+  const pending = vendor?.status === "PENDING_APPROVAL" && !incomplete;
   const quality = useVendorQuality(id);
   const penalties = useVendorPenalties(id, { page: 1, limit: 5, search: "" });
   const kyc = useVendorKyc(id, vendor?.email ?? null, pending);
@@ -122,13 +124,14 @@ export function VendorProfileModal({ vendor, onClose, onAction, onCommission, on
     catch (cause) { onNotice("error", fail(cause, "Could not waive the penalty.")); }
   }
 
-  const footer = !vendor ? undefined : pending ? (
+  const statusAction = !vendor ? null : vendor.status === "SUSPEND" ? <PrimaryButton tone="green" onClick={() => onAction(vendor, "reinstate")}>Reinstate Vendor</PrimaryButton> : vendor.status === "ACTIVE" ? <PrimaryButton tone="orange" onClick={() => onAction(vendor, "suspend")}>Suspend Vendor</PrimaryButton> : null;
+  const footer = !vendor ? undefined : incomplete ? (statusAction ?? <GhostButton onClick={onClose}>Close</GhostButton>) : pending ? (
     <><GhostButton onClick={() => onAction(vendor, "reject")}>Reject</GhostButton><PrimaryButton tone="green" onClick={() => onAction(vendor, "approve")}>Approve Vendor</PrimaryButton></>
   ) : (
     <>
       <GhostButton onClick={() => onCommission(vendor)}>Edit Commission</GhostButton>
       <PrimaryButton tone="red" onClick={() => onPenalty(vendor)}>Issue Penalty Notice</PrimaryButton>
-      {vendor.status === "SUSPEND" ? <PrimaryButton tone="green" onClick={() => onAction(vendor, "reinstate")}>Reinstate Vendor</PrimaryButton> : vendor.status === "ACTIVE" ? <PrimaryButton tone="orange" onClick={() => onAction(vendor, "suspend")}>Suspend Vendor</PrimaryButton> : null}
+      {statusAction}
     </>
   );
 
@@ -136,9 +139,9 @@ export function VendorProfileModal({ vendor, onClose, onAction, onCommission, on
     <Modal open={!!vendor} onClose={onClose} title={pending ? "Review Vendor Registration" : "Vendor Profile"} width="max-w-[600px]" footer={footer}>
       {vendor ? (
         <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-4"><Avatar name={vendor.storeName} src={vendor.avatar} size={52} /><div className="min-w-0 flex-1"><h3 className="truncate text-[20px] font-bold leading-tight text-gray-900">{vendor.storeName}</h3><p className="text-[13px] text-gray-500">{vendor.name}</p></div><div className="flex flex-col items-end gap-1.5"><StatusPill status={vendor.status === "ACTIVE" ? "APPROVED" : vendor.status} label={vendorStatusLabel(vendor.status)} tone={vendor.status === "ACTIVE" ? "green" : vendor.status === "SUSPEND" ? "red" : "amber"} />{vendor.isFlagged ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">Flagged</span> : null}</div></div>
+          <div className="flex items-center gap-4"><Avatar name={vendorDisplayName(vendor)} src={vendor.avatar} size={52} /><div className="min-w-0 flex-1"><h3 className="truncate text-[20px] font-bold leading-tight text-gray-900">{vendorDisplayName(vendor)}</h3><p className="text-[13px] text-gray-500">{vendor.storeName === null ? "No store profile" : vendor.name}</p></div><div className="flex flex-col items-end gap-1.5"><StatusPill status={vendor.status === "ACTIVE" ? "APPROVED" : vendor.status} label={vendorStatusLabel(vendor.status)} tone={vendor.status === "ACTIVE" ? "green" : vendor.status === "SUSPEND" ? "red" : "amber"} />{vendor.isFlagged ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">Flagged</span> : null}</div></div>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[["Products", vendor.productCount.toLocaleString("en-NG")], ["Orders", vendor.orderCount.toLocaleString("en-NG")], ["Revenue", formatNaira(vendor.revenue)], ["Rating", vendor.rating > 0 ? vendor.rating.toFixed(1) : "No reviews"]].map(([label, value]) => <div key={label} className="rounded-[12px] bg-[#F9FAFB] p-3 text-center"><dd className="text-[16px] font-bold text-gray-900">{value}</dd><dt className="mt-0.5 text-[11px] text-gray-500">{label}</dt></div>)}
+            {[["Products", vendor.productCount.toLocaleString("en-NG")], ["Orders", vendor.orderCount.toLocaleString("en-NG")], ["Revenue", vendor.revenue === null ? "—" : formatNaira(vendor.revenue)], ["Rating", vendor.rating === null ? "—" : vendor.rating > 0 ? vendor.rating.toFixed(1) : "No reviews"]].map(([label, value]) => <div key={label} className="rounded-[12px] bg-[#F9FAFB] p-3 text-center"><dd className="text-[16px] font-bold text-gray-900">{value}</dd><dt className="mt-0.5 text-[11px] text-gray-500">{label}</dt></div>)}
           </dl>
           <div className="grid grid-cols-1 gap-2 text-[13px] sm:grid-cols-2">
             <p className="flex items-center gap-2 text-gray-700"><Mail className="h-4 w-4 text-gray-400" aria-hidden />{vendor.email}</p>
@@ -150,7 +153,12 @@ export function VendorProfileModal({ vendor, onClose, onAction, onCommission, on
           </div>
           {vendor.isFlagged && vendor.flagReason ? <p className="rounded-[10px] bg-red-50 p-3 text-[13px] text-red-800">Flagged for review: {vendor.flagReason}</p> : null}
 
-          {pending ? (
+          {incomplete ? (
+            <section aria-label="Store profile missing" role="status" className="flex items-start gap-2 rounded-[14px] bg-amber-50 p-4 text-[13px] text-amber-900">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <p>This vendor account has no store profile, so store name, revenue, rating, quality metrics and penalties are unavailable. It cannot be approved, and commission or penalties cannot be set until a store profile exists.</p>
+            </section>
+          ) : pending ? (
             <section aria-label="Registration documents" className="rounded-[14px] border border-gray-100 p-4">
               <h4 className="mb-3 text-[13px] font-bold text-gray-900">Registration details</h4>
               {kyc.isLoading ? <div className="h-16 animate-pulse rounded bg-gray-100" aria-label="Loading documents" /> : kyc.error ? <p role="alert" className="text-[13px] text-red-700">{kyc.error.message}</p> : !kyc.data ? <p className="text-[13px] text-gray-500">No registration documents were found for this vendor.</p> : (

@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationTarget } from "@/components/admin/notifications/NotificationTarget";
+
 import { ReasonDialog } from "@/components/admin/common/Modal";
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
@@ -253,6 +255,7 @@ export default function StylistsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] flex-col overflow-y-auto bg-white p-1 md:p-8">
+      <NotificationTarget onTarget={(id) => { setSelectedStylistId(id); setModalMode("view"); setIsOpen(true); }} />
       <div className="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-bold text-[#1E1E1E]">Stylist Management</h1>

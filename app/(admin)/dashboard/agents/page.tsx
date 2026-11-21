@@ -1,5 +1,7 @@
 "use client";
 
+import { NotificationTarget } from "@/components/admin/notifications/NotificationTarget";
+
 import { useState } from "react";
 import { Download, Eye, RefreshCw, UserCheck, Users, Wallet, Clock } from "lucide-react";
 import Headers from "@/components/admin/common/Headers";
@@ -8,7 +10,7 @@ import { Notice } from "@/components/admin/common/Modal";
 import { AgentProfileModal, agentStatusLabel, agentStatusTone } from "@/components/admin/agents/AgentProfileModal";
 import { ProviderActionModal, type ActionKind, type ProviderTarget } from "@/components/admin/vendors/VendorModals";
 import { formatDate, formatNaira } from "@/lib/admin/format";
-import { directoryPath, useAgents, useReferrals, type Agent } from "@/lib/admin/vendors-agents";
+import { directoryPath, agentSchema, useAgents, useReferrals, type Agent } from "@/lib/admin/vendors-agents";
 import { useDebounced } from "@/lib/admin/use-debounced";
 import { apiClient } from "@/lib/api-client";
 
@@ -48,6 +50,7 @@ export default function AgentsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] flex-col bg-white p-1 md:p-8">
+      <NotificationTarget onTarget={async (id, signal) => { const result = await apiClient.admin.request(`street-agents/${encodeURIComponent(id)}`, { method: "GET", signal }, (data) => agentSchema.parse(data)); if (!signal.aborted) setProfile(result.data); }} />
       <Headers title="Street Agent" description="Manage platform agents and the stylists they refer" buttonOneIcon={<Download className="h-4 w-4" />} buttonOneText="Export CSV" buttonOneAction={() => void exportCsv()} buttonTwoIcon={<RefreshCw className="h-4 w-4" />} buttonTwoText="Refresh" buttonTwoAction={refresh} buttonTwoDisabled={active.isFetching} />
       <Notice notice={notice} onDismiss={() => setNotice(null)} />
       <section aria-label="Agent totals" className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

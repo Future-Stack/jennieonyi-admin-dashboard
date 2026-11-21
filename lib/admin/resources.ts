@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiClient } from "@/lib/api-client";
+import { findNotificationTarget } from "./notification-target";
 
 /* ---------- shared list plumbing ---------- */
 
@@ -107,6 +108,13 @@ export const escrowOverviewSchema = z.object({ serviceHeld: bucket, productHeld:
 export const commissionChartSchema = z.object({ currency: z.string(), months: z.array(z.object({ month: z.string(), serviceCommission: money, productCommission: money })), total: money });
 export const useTransactions = (params: ListParams) => useAdminList("payments", "transactions", transactionSchema, params);
 export const usePayouts = (params: ListParams) => useAdminList("payments", "payouts", payoutSchema, params);
+export const usePayoutDetail = (id: string | null) => useQuery({
+  queryKey: ["admin", "payments", "payout-detail", id], enabled: !!id,
+  queryFn: ({ signal }) => findNotificationTarget(id!, async (page) => {
+    const result = await apiClient.admin.request(listPath("payouts", { page, limit: 50 }), { method: "GET", signal }, (data) => z.array(payoutSchema).parse(data));
+    return { rows: result.data, totalPages: metaSchema.parse(result.meta).totalPages };
+  }, (row) => row.id, signal),
+});
 export const useEscrowOverview = () => useQuery({ queryKey: ["admin", "payments", "overview"], queryFn: async ({ signal }) => (await apiClient.admin.request("escrow/overview", { method: "GET", signal }, (d) => escrowOverviewSchema.parse(d))).data });
 export const useCommissionChart = () => useQuery({ queryKey: ["admin", "payments", "chart"], queryFn: async ({ signal }) => (await apiClient.admin.request("commissions/chart", { method: "GET", signal }, (d) => commissionChartSchema.parse(d))).data });
 export const useReleaseEscrow = () => useAdminWrite<{ source: "BOOKING" | "ORDER"; sourceId: string; reason: string }>({ keys: ["payments", "bookings", "orders"], method: "POST", idempotent: true, path: () => "escrow/release", body: (x) => x });
